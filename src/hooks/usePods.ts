@@ -1,0 +1,51 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+
+import * as podsApi from '@/api/pods';
+import { queryKeys } from './queryKeys';
+
+export function usePods() {
+  return useQuery({
+    queryKey: queryKeys.pods,
+    queryFn: podsApi.listMyPods,
+  });
+}
+
+export function usePod(podId: string) {
+  return useQuery({
+    queryKey: queryKeys.pod(podId),
+    queryFn: () => podsApi.getPod(podId),
+    enabled: !!podId,
+  });
+}
+
+export function usePodMembers(podId: string) {
+  return useQuery({
+    queryKey: queryKeys.members(podId),
+    queryFn: () => podsApi.listMembers(podId),
+    enabled: !!podId,
+  });
+}
+
+export function useCreatePod() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (name: string) => podsApi.createPod(name),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.pods }),
+  });
+}
+
+export function useJoinPod() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (code: string) => podsApi.joinPod(code),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.pods }),
+  });
+}
+
+export function useDeletePod() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (podId: string) => podsApi.deletePod(podId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.pods }),
+  });
+}
