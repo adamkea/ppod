@@ -1,6 +1,3 @@
-import DateTimePicker, {
-  type DateTimePickerEvent,
-} from '@react-native-community/datetimepicker';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -16,12 +13,13 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
+import { DateField } from '@/components/DateField';
 import { TextField } from '@/components/TextField';
 import { Card, EmptyState, Loading } from '@/components/ui';
 import { useDeleteGame, useGame, useLogGame, useUpdateGame } from '@/hooks/useGames';
 import { usePlayers } from '@/hooks/usePlayers';
 import { usePod } from '@/hooks/usePods';
-import { formatDateHeading, fromISODate, todayISO, toISODate } from '@/lib/dates';
+import { todayISO } from '@/lib/dates';
 import { useAuth } from '@/providers/AuthProvider';
 import { colors, fontSize, radius, spacing } from '@/theme';
 import type { ParticipantInput } from '@/types/database';
@@ -63,7 +61,6 @@ export default function AddGameScreen() {
   const [playedAt, setPlayedAt] = useState(todayISO());
   const [gameType, setGameType] = useState('commander');
   const [entries, setEntries] = useState<Record<string, Entry>>({});
-  const [showDatePicker, setShowDatePicker] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Seed form state once the data it depends on has loaded.
@@ -107,11 +104,6 @@ export default function AddGameScreen() {
 
   function update(playerId: string, patch: Partial<Entry>) {
     setEntries((prev) => ({ ...prev, [playerId]: { ...prev[playerId], ...patch } }));
-  }
-
-  function onDateChange(event: DateTimePickerEvent, date?: Date) {
-    if (Platform.OS === 'android') setShowDatePicker(false);
-    if (event.type === 'set' && date) setPlayedAt(toISODate(date));
   }
 
   async function handleSave() {
@@ -197,10 +189,7 @@ export default function AddGameScreen() {
         {/* Date + game type */}
         <View style={styles.metaRow}>
           <View style={styles.metaItem}>
-            <Text style={styles.metaLabel}>Date</Text>
-            <Pressable style={styles.dateButton} onPress={() => setShowDatePicker((v) => !v)}>
-              <Text style={styles.dateText}>{formatDateHeading(playedAt)}</Text>
-            </Pressable>
+            <DateField value={playedAt} onChange={setPlayedAt} maximumDate={new Date()} />
           </View>
           <View style={styles.metaItem}>
             <TextField
@@ -212,17 +201,6 @@ export default function AddGameScreen() {
             />
           </View>
         </View>
-
-        {showDatePicker ? (
-          <DateTimePicker
-            value={fromISODate(playedAt)}
-            mode="date"
-            maximumDate={new Date()}
-            display={Platform.OS === 'ios' ? 'inline' : 'default'}
-            onChange={onDateChange}
-            themeVariant="dark"
-          />
-        ) : null}
 
         <Text style={styles.sectionTitle}>
           Players · {selectedCount} playing
@@ -319,17 +297,6 @@ const styles = StyleSheet.create({
   content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxl },
   metaRow: { flexDirection: 'row', gap: spacing.md },
   metaItem: { flex: 1, gap: spacing.xs },
-  metaLabel: { color: colors.textMuted, fontSize: fontSize.sm, fontWeight: '600' },
-  dateButton: {
-    backgroundColor: colors.surfaceAlt,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    minHeight: 48,
-    justifyContent: 'center',
-    paddingHorizontal: spacing.md,
-  },
-  dateText: { color: colors.text, fontSize: fontSize.md },
   sectionTitle: {
     color: colors.textMuted,
     fontSize: fontSize.sm,

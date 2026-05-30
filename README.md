@@ -70,6 +70,37 @@ meant to ship in the client — RLS is what protects the data.
 > If you see Expo/React Native version warnings, run `npx expo install --fix`
 > to align native package versions with your installed SDK.
 
+## Web deployment (Vercel)
+
+The app is mobile-first, but Expo Router can export a React-Native-Web build —
+a static single-page app — which deploys to Vercel for quick demos and sharing a
+URL with people who won't install the mobile app.
+
+`vercel.json` is already configured (build command, output dir, and a catch-all
+rewrite so client-side routes survive a refresh). To deploy:
+
+1. Import the repo into Vercel (or run `vercel`).
+2. Add the env vars in **Vercel → Project → Settings → Environment Variables**:
+   - `EXPO_PUBLIC_SUPABASE_URL`
+   - `EXPO_PUBLIC_SUPABASE_ANON_KEY`
+
+   These are inlined at **build** time, so they must be set in Vercel — a local
+   `.env` is not enough for the deployed build.
+3. Deploy. Vercel runs `npx expo export -p web` and serves `dist/`.
+
+To preview the production web build locally:
+
+```bash
+npx expo export -p web        # outputs ./dist
+npx serve dist                # or any static file server
+```
+
+Notes:
+- The date picker is platform-split: native uses `@react-native-community/datetimepicker`;
+  web uses a native `<input type="date">` (see `src/components/DateField*.tsx`).
+- Web is a convenience target. The native iOS/Android apps still ship via Expo
+  Go / EAS Build / the app stores, **not** Vercel.
+
 ## Permissions model (Phase 1)
 
 - Any pod member can **log and edit** any game in the pod.
