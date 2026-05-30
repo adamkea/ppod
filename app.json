@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "name": "Pod Tracker",
+    "slug": "ppod",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "ppod",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.ppod.app"
+    },
+    "android": {
+      "package": "com.ppod.app"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    },
+    "plugins": [
+      "expo-router"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
