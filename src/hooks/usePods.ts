@@ -42,6 +42,18 @@ export function useJoinPod() {
   });
 }
 
+export function useRenamePod() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ podId, name }: { podId: string; name: string }) =>
+      podsApi.renamePod(podId, name),
+    onSuccess: (_data, { podId }) => {
+      qc.invalidateQueries({ queryKey: queryKeys.pod(podId) });
+      qc.invalidateQueries({ queryKey: queryKeys.pods });
+    },
+  });
+}
+
 export function useDeletePod() {
   const qc = useQueryClient();
   return useMutation({

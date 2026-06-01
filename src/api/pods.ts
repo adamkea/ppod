@@ -35,6 +35,11 @@ export async function joinPod(inviteCode: string): Promise<Pod> {
   return data as Pod;
 }
 
+export async function renamePod(podId: string, name: string): Promise<void> {
+  const { error } = await supabase.from('pods').update({ name }).eq('id', podId);
+  if (error) throw error;
+}
+
 export async function deletePod(podId: string): Promise<void> {
   // Owner-only at the RLS layer.
   const { error } = await supabase.from('pods').delete().eq('id', podId);

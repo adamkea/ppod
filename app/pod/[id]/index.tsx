@@ -4,9 +4,10 @@ import { Image, Pressable, SectionList, StyleSheet, Text, View } from 'react-nat
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
+import { PromptModal } from '@/components/PromptModal';
 import { Card, EmptyState, ErrorState, Loading } from '@/components/ui';
 import { useGames } from '@/hooks/useGames';
-import { usePod } from '@/hooks/usePods';
+import { usePod, useRenamePod } from '@/hooks/usePods';
 import { formatDateHeading } from '@/lib/dates';
 import { commanderLabel, groupGamesByDate } from '@/lib/stats';
 import { useAuth } from '@/providers/AuthProvider';
@@ -22,8 +23,22 @@ export default function PodDetailScreen() {
 
   const pod = usePod(podId);
   const games = useGames(podId);
+  const renamePod = useRenamePod();
 
   const isOwner = pod.data?.owner_id === session?.user.id;
+
+  const [renaming, setRenaming] = useState(false);
+  const [renameError, setRenameError] = useState<string | null>(null);
+
+  async function handleRename(name: string) {
+    setRenameError(null);
+    try {
+      await renamePod.mutateAsync({ podId, name });
+      setRenaming(false);
+    } catch (e) {
+      setRenameError(e instanceof Error ? e.message : 'Could not rename pod.');
+    }
+  }
 
   const sections = useMemo(
     () =>
@@ -40,9 +55,16 @@ export default function PodDetailScreen() {
         options={{
           title: pod.data?.name ?? 'Pod',
           headerRight: () => (
-            <Pressable onPress={() => router.push(`/pod/${podId}/stats`)} hitSlop={8}>
-              <Text style={styles.headerLink}>Stats</Text>
-            </Pressable>
+            <View style={styles.headerButtons}>
+              {isOwner && (
+                <Pressable onPress={() => setRenaming(true)} hitSlop={8}>
+                  <Text style={styles.headerLink}>Edit</Text>
+                </Pressable>
+              )}
+              <Pressable onPress={() => router.push(`/pod/${podId}/stats`)} hitSlop={8}>
+                <Text style={styles.headerLink}>Stats</Text>
+              </Pressable>
+            </View>
           ),
         }}
       />
@@ -88,6 +110,18 @@ export default function PodDetailScreen() {
           )}
         />
       )}
+
+      <PromptModal
+        visible={renaming}
+        title="Rename pod"
+        placeholder="Pod name"
+        initialValue={pod.data?.name ?? ''}
+        submitLabel="Save"
+        submitting={renamePod.isPending}
+        error={renameError}
+        onSubmit={handleRename}
+        onClose={() => { setRenaming(false); setRenameError(null); }}
+      />
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.md }]}>
         <Button
@@ -243,6 +277,7 @@ function GameCard({
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.bg },
   list: { padding: spacing.lg, gap: spacing.md, flexGrow: 1 },
+  headerButtons: { flexDirection: 'row', gap: spacing.md },
   headerLink: { color: colors.primary, fontSize: fontSize.md, fontWeight: '600' },
   podHeader: { marginBottom: spacing.sm },
   inviteRow: {
