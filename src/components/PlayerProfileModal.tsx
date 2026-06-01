@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -20,7 +21,32 @@ import {
   usePlayerCommanders,
 } from '@/hooks/usePlayerCommanders';
 import type { Player, PlayerCommander } from '@/types/database';
-import { commanderLabel } from '@/lib/stats';
+
+// Fetch the art_crop image URI for a single card name from Scryfall.
+async function fetchCardArt(name: string): Promise<string | null> {
+  try {
+    const res = await fetch(
+      `https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(name)}`,
+    );
+    if (!res.ok) return null;
+    const json = await res.json();
+    return (json.image_uris?.art_crop as string) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function useCardArt(name: string) {
+  const [uri, setUri] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    fetchCardArt(name).then((url) => {
+      if (!cancelled) setUri(url);
+    });
+    return () => { cancelled = true; };
+  }, [name]);
+  return uri;
+}
 
 interface Props {
   player: Player | null;
@@ -76,15 +102,17 @@ export function PlayerProfileModal({ player, onClose }: Props) {
           <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
             <View style={styles.handle} />
             <Text style={styles.title}>{player?.name}</Text>
+
             <Text style={styles.sectionLabel}>Commanders</Text>
 
             <ScrollView
               style={styles.list}
               contentContainerStyle={styles.listContent}
               keyboardShouldPersistTaps="handled"
+              nestedScrollEnabled
             >
               {commanders.isLoading ? (
-                <ActivityIndicator color={colors.primary} />
+                <ActivityIndicator color={colors.primary} style={{ marginVertical: spacing.md }} />
               ) : commanders.data?.length === 0 ? (
                 <Text style={styles.empty}>No commanders saved yet.</Text>
               ) : (
@@ -98,6 +126,8 @@ export function PlayerProfileModal({ player, onClose }: Props) {
                 ))
               )}
             </ScrollView>
+
+            <View style={styles.divider} />
 
             <View style={styles.addSection}>
               <Text style={styles.sectionLabel}>Add commander</Text>
@@ -147,17 +177,102 @@ function CommanderRow({
   onDelete: () => void;
   deleting: boolean;
 }) {
+  const mainArt = useCardArt(item.commander);
+  const partnerArt = useCardArt(item.partner_commander ?? '');
+
+  const hasPartner = !!item.partner_commander;
+
   return (
-    <View style={styles.commanderRow}>
-      <Text style={styles.commanderName} numberOfLines={1}>
-        {commanderLabel(item.commander, item.partner_commander)}
-      </Text>
-      <Pressable onPress={onDelete} disabled={deleting} hitSlop={8}>
-        <Text style={styles.removeText}>Remove</Text>
+    <View style={rowStyles.card}>
+      {/* Art thumbnail(s) */}
+      <View style={rowStyles.artWrap}>
+        <ArtThumbnail uri={mainArt} size={hasPartner ? 'small' : 'large'} />
+        {hasPartner && <ArtThumbnail uri={partnerArt} size="small" />}
+      </View>
+
+      {/* Name(s) */}
+      <View style={rowStyles.nameWrap}>
+        <Text style={rowStyles.commanderName} numberOfLines={2}>
+          {item.commander}
+        </Text>
+        {hasPartner && (
+          <Text style={rowStyles.partnerName} numberOfLines={2}>
+            + {item.partner_commander}
+          </Text>
+        )}
+      </View>
+
+      {/* Remove */}
+      <Pressable onPress={onDelete} disabled={deleting} hitSlop={8} style={rowStyles.removeBtn}>
+        <Text style={rowStyles.removeText}>✕</Text>
       </Pressable>
     </View>
   );
 }
+
+function ArtThumbnail({ uri, size }: { uri: string | null; size: 'small' | 'large' }) {
+  const w = size === 'large' ? 80 : 60;
+  const h = size === 'large' ? 58 : 44;
+
+  return (
+    <View style={[thumbStyles.frame, { width: w, height: h }]}>
+      {uri ? (
+        <Image source={{ uri }} style={thumbStyles.img} resizeMode="cover" />
+      ) : (
+        <View style={thumbStyles.placeholder}>
+          <Text style={thumbStyles.placeholderText}>🃏</Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
+const thumbStyles = StyleSheet.create({
+  frame: {
+    borderRadius: radius.sm,
+    overflow: 'hidden',
+    backgroundColor: colors.surfaceAlt,
+  },
+  img: { width: '100%', height: '100%' },
+  placeholder: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  placeholderText: { fontSize: 20 },
+});
+
+const rowStyles = StyleSheet.create({
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.sm,
+    gap: spacing.md,
+  },
+  artWrap: {
+    flexDirection: 'column',
+    gap: 3,
+  },
+  nameWrap: { flex: 1, gap: 2 },
+  commanderName: {
+    color: colors.text,
+    fontSize: fontSize.md,
+    fontWeight: '600',
+  },
+  partnerName: {
+    color: colors.textMuted,
+    fontSize: fontSize.sm,
+  },
+  removeBtn: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  removeText: {
+    color: colors.danger,
+    fontSize: fontSize.md,
+    fontWeight: '700',
+  },
+});
 
 const styles = StyleSheet.create({
   backdrop: {
@@ -174,7 +289,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     padding: spacing.lg,
     gap: spacing.md,
-    maxHeight: '85%',
+    maxHeight: '90%',
   },
   handle: {
     alignSelf: 'center',
@@ -196,20 +311,13 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  list: { maxHeight: 160 },
+  list: { maxHeight: 280 },
   listContent: { gap: spacing.sm },
   empty: { color: colors.textMuted, fontSize: fontSize.sm },
-  commanderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: colors.surfaceAlt,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+  divider: {
+    height: 1,
+    backgroundColor: colors.border,
   },
-  commanderName: { color: colors.text, fontSize: fontSize.md, flex: 1, marginRight: spacing.md },
-  removeText: { color: colors.danger, fontSize: fontSize.sm, fontWeight: '600' },
   addSection: { gap: spacing.sm },
   searchRow: { zIndex: 10 },
   addPartner: { color: colors.primary, fontSize: fontSize.sm, fontWeight: '600' },
