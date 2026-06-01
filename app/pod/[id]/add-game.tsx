@@ -13,6 +13,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
+import { CommanderSearch } from '@/components/CommanderSearch';
 import { DateField } from '@/components/DateField';
 import { TextField } from '@/components/TextField';
 import { Card, EmptyState, Loading } from '@/components/ui';
@@ -246,18 +247,16 @@ export default function AddGameScreen() {
 
                 {entry.selected ? (
                   <View style={styles.commanderArea}>
-                    <TextField
+                    <CommanderSearch
                       value={entry.commander}
-                      onChangeText={(t) => update(player.id, { commander: t })}
+                      onChange={(t) => update(player.id, { commander: t })}
                       placeholder="Commander (optional)"
-                      autoCapitalize="words"
                     />
                     {entry.showPartner ? (
-                      <TextField
+                      <CommanderSearch
                         value={entry.partner}
-                        onChangeText={(t) => update(player.id, { partner: t })}
+                        onChange={(t) => update(player.id, { partner: t })}
                         placeholder="Partner commander"
-                        autoCapitalize="words"
                       />
                     ) : (
                       <Pressable
