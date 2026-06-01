@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  FlatList,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -89,15 +89,15 @@ export function CommanderSearch({ value, onChange, placeholder = 'Commander (opt
       </View>
 
       {open ? (
-        <View style={styles.dropdown}>
-          <FlatList
-            data={suggestions}
-            keyExtractor={(item) => item}
+        <View style={[styles.dropdown, suggestions.length > 5 && styles.dropdownScroll]}>
+          <ScrollView
             keyboardShouldPersistTaps="handled"
             scrollEnabled={suggestions.length > 5}
-            style={suggestions.length > 5 ? styles.dropdownScroll : undefined}
-            renderItem={({ item, index }) => (
+            nestedScrollEnabled
+          >
+            {suggestions.map((item, index) => (
               <Pressable
+                key={item}
                 style={[
                   styles.suggestion,
                   index < suggestions.length - 1 && styles.suggestionBorder,
@@ -106,8 +106,8 @@ export function CommanderSearch({ value, onChange, placeholder = 'Commander (opt
               >
                 <Text style={styles.suggestionText}>{item}</Text>
               </Pressable>
-            )}
-          />
+            ))}
+          </ScrollView>
         </View>
       ) : null}
     </View>

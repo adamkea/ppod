@@ -19,11 +19,13 @@ import { TextField } from '@/components/TextField';
 import { Card, EmptyState, Loading } from '@/components/ui';
 import { useDeleteGame, useGame, useLogGame, useUpdateGame } from '@/hooks/useGames';
 import { usePlayers } from '@/hooks/usePlayers';
+import { usePlayerCommanders } from '@/hooks/usePlayerCommanders';
 import { usePod } from '@/hooks/usePods';
 import { todayISO } from '@/lib/dates';
 import { useAuth } from '@/providers/AuthProvider';
+import { commanderLabel } from '@/lib/stats';
 import { colors, fontSize, radius, spacing } from '@/theme';
-import type { ParticipantInput } from '@/types/database';
+import type { ParticipantInput, PlayerCommander } from '@/types/database';
 
 interface Entry {
   selected: boolean;
@@ -247,6 +249,17 @@ export default function AddGameScreen() {
 
                 {entry.selected ? (
                   <View style={styles.commanderArea}>
+                    <SavedCommanderChips
+                      playerId={player.id}
+                      activeCommander={entry.commander}
+                      onSelect={(c) =>
+                        update(player.id, {
+                          commander: c.commander,
+                          partner: c.partner_commander ?? '',
+                          showPartner: !!c.partner_commander,
+                        })
+                      }
+                    />
                     <CommanderSearch
                       value={entry.commander}
                       onChange={(t) => update(player.id, { commander: t })}
@@ -290,6 +303,72 @@ export default function AddGameScreen() {
     </KeyboardAvoidingView>
   );
 }
+
+function SavedCommanderChips({
+  playerId,
+  activeCommander,
+  onSelect,
+}: {
+  playerId: string;
+  activeCommander: string;
+  onSelect: (c: PlayerCommander) => void;
+}) {
+  const { data } = usePlayerCommanders(playerId);
+  if (!data || data.length === 0) return null;
+
+  return (
+    <View style={chipStyles.row}>
+      {data.map((c) => {
+        const label = commanderLabel(c.commander, c.partner_commander);
+        const active = c.commander === activeCommander;
+        return (
+          <Pressable
+            key={c.id}
+            style={[chipStyles.chip, active && chipStyles.chipActive]}
+            onPress={() => onSelect(c)}
+            hitSlop={4}
+          >
+            <Text
+              style={[chipStyles.chipText, active && chipStyles.chipTextActive]}
+              numberOfLines={1}
+            >
+              {label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+const chipStyles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  chip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
+    maxWidth: 200,
+  },
+  chipActive: {
+    borderColor: colors.primary,
+    backgroundColor: 'rgba(124,92,255,0.15)',
+  },
+  chipText: {
+    color: colors.textMuted,
+    fontSize: fontSize.sm,
+    fontWeight: '600',
+  },
+  chipTextActive: {
+    color: colors.primary,
+  },
+});
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.bg },

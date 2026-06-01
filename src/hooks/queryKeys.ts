@@ -5,4 +5,5 @@ export const queryKeys = {
   players: (podId: string) => ['pod', podId, 'players'] as const,
   games: (podId: string) => ['pod', podId, 'games'] as const,
   game: (gameId: string) => ['game', gameId] as const,
+  playerCommanders: (playerId: string) => ['playerCommanders', playerId] as const,
 };
