@@ -59,6 +59,15 @@ export interface ParticipantInput {
   is_winner: boolean;
 }
 
+// A commander saved to a player's profile for quick-pick during game logging.
+export interface PlayerCommander {
+  id: string;
+  player_id: string;
+  commander: string;
+  partner_commander: string | null;
+  created_at: string;
+}
+
 // Derived per-player stats.
 export interface PlayerStat {
   player_id: string;
