@@ -1,16 +1,17 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useMemo } from 'react';
-import { Pressable, SectionList, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { Image, Pressable, SectionList, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
+import { PromptModal } from '@/components/PromptModal';
 import { Card, EmptyState, ErrorState, Loading } from '@/components/ui';
 import { useGames } from '@/hooks/useGames';
-import { usePod } from '@/hooks/usePods';
+import { usePod, useRenamePod } from '@/hooks/usePods';
 import { formatDateHeading } from '@/lib/dates';
 import { commanderLabel, groupGamesByDate } from '@/lib/stats';
 import { useAuth } from '@/providers/AuthProvider';
-import { colors, fontSize, spacing } from '@/theme';
+import { colors, fontSize, radius, spacing } from '@/theme';
 import type { GameWithPlayers } from '@/types/database';
 
 export default function PodDetailScreen() {
@@ -22,8 +23,22 @@ export default function PodDetailScreen() {
 
   const pod = usePod(podId);
   const games = useGames(podId);
+  const renamePod = useRenamePod();
 
   const isOwner = pod.data?.owner_id === session?.user.id;
+
+  const [renaming, setRenaming] = useState(false);
+  const [renameError, setRenameError] = useState<string | null>(null);
+
+  async function handleRename(name: string) {
+    setRenameError(null);
+    try {
+      await renamePod.mutateAsync({ podId, name });
+      setRenaming(false);
+    } catch (e) {
+      setRenameError(e instanceof Error ? e.message : 'Could not rename pod.');
+    }
+  }
 
   const sections = useMemo(
     () =>
@@ -40,9 +55,16 @@ export default function PodDetailScreen() {
         options={{
           title: pod.data?.name ?? 'Pod',
           headerRight: () => (
-            <Pressable onPress={() => router.push(`/pod/${podId}/stats`)} hitSlop={8}>
-              <Text style={styles.headerLink}>Stats</Text>
-            </Pressable>
+            <View style={styles.headerButtons}>
+              {isOwner && (
+                <Pressable onPress={() => setRenaming(true)} hitSlop={8}>
+                  <Text style={styles.headerLink}>Edit</Text>
+                </Pressable>
+              )}
+              <Pressable onPress={() => router.push(`/pod/${podId}/stats`)} hitSlop={8}>
+                <Text style={styles.headerLink}>Stats</Text>
+              </Pressable>
+            </View>
           ),
         }}
       />
@@ -89,6 +111,18 @@ export default function PodDetailScreen() {
         />
       )}
 
+      <PromptModal
+        visible={renaming}
+        title="Rename pod"
+        placeholder="Pod name"
+        initialValue={pod.data?.name ?? ''}
+        submitLabel="Save"
+        submitting={renamePod.isPending}
+        error={renameError}
+        onSubmit={handleRename}
+        onClose={() => { setRenaming(false); setRenameError(null); }}
+      />
+
       <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.md }]}>
         <Button
           label="＋ Log game"
@@ -124,6 +158,62 @@ function PodHeader({
   );
 }
 
+async function fetchCommanderArt(name: string): Promise<string | null> {
+  try {
+    const res = await fetch(
+      `https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(name)}`,
+    );
+    if (!res.ok) return null;
+    const json = await res.json();
+    return (json.image_uris?.art_crop as string) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function CommanderCell({
+  name,
+  commander,
+  isWinner,
+}: {
+  name: string;
+  commander: string | null;
+  isWinner: boolean;
+}) {
+  const [artUri, setArtUri] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (commander) {
+      fetchCommanderArt(commander).then(setArtUri);
+    }
+  }, [commander]);
+
+  const borderColor = isWinner ? colors.success : colors.danger;
+
+  return (
+    <View style={[gridStyles.cell, { borderColor }]}>
+      {artUri ? (
+        <Image source={{ uri: artUri }} style={gridStyles.art} resizeMode="cover" />
+      ) : (
+        <View style={gridStyles.artPlaceholder}>
+          <Text style={gridStyles.placeholderIcon}>🃏</Text>
+        </View>
+      )}
+      <View style={[gridStyles.nameBar, { backgroundColor: isWinner ? colors.success + '33' : colors.danger + '33' }]}>
+        {isWinner && <Text style={gridStyles.crownIcon}>👑</Text>}
+        <Text style={[gridStyles.playerName, { color: isWinner ? colors.success : colors.danger }]} numberOfLines={1}>
+          {name}
+        </Text>
+      </View>
+      {commander ? (
+        <Text style={gridStyles.commanderText} numberOfLines={1}>
+          {commander}
+        </Text>
+      ) : null}
+    </View>
+  );
+}
+
 function GameCard({
   game,
   onPress,
@@ -137,32 +227,47 @@ function GameCard({
     return (a.players?.name ?? '').localeCompare(b.players?.name ?? '');
   });
 
+  const useGrid = participants.length >= 2 && participants.length <= 4;
+
   return (
     <Pressable onPress={onPress}>
       {({ pressed }) => (
         <Card style={[styles.gameCard, pressed && styles.pressed]}>
           <Text style={styles.gameType}>{game.game_type}</Text>
-          <View style={styles.participants}>
-            {participants.map((gp) => {
-              const cmd = commanderLabel(gp.commander, gp.partner_commander);
-              return (
-                <View key={gp.id} style={styles.participantRow}>
-                  <Text
-                    style={[styles.participantName, gp.is_winner && styles.winnerName]}
-                    numberOfLines={1}
-                  >
-                    {gp.is_winner ? '👑 ' : ''}
-                    {gp.players?.name ?? 'Unknown'}
-                  </Text>
-                  {cmd ? (
-                    <Text style={styles.commander} numberOfLines={1}>
-                      {cmd}
+          {useGrid ? (
+            <View style={gridStyles.grid}>
+              {participants.map((gp) => (
+                <CommanderCell
+                  key={gp.id}
+                  name={gp.players?.name ?? 'Unknown'}
+                  commander={gp.commander}
+                  isWinner={gp.is_winner}
+                />
+              ))}
+            </View>
+          ) : (
+            <View style={styles.participants}>
+              {participants.map((gp) => {
+                const cmd = commanderLabel(gp.commander, gp.partner_commander);
+                return (
+                  <View key={gp.id} style={styles.participantRow}>
+                    <Text
+                      style={[styles.participantName, gp.is_winner && styles.winnerName]}
+                      numberOfLines={1}
+                    >
+                      {gp.is_winner ? '👑 ' : ''}
+                      {gp.players?.name ?? 'Unknown'}
                     </Text>
-                  ) : null}
-                </View>
-              );
-            })}
-          </View>
+                    {cmd ? (
+                      <Text style={styles.commander} numberOfLines={1}>
+                        {cmd}
+                      </Text>
+                    ) : null}
+                  </View>
+                );
+              })}
+            </View>
+          )}
         </Card>
       )}
     </Pressable>
@@ -172,6 +277,7 @@ function GameCard({
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.bg },
   list: { padding: spacing.lg, gap: spacing.md, flexGrow: 1 },
+  headerButtons: { flexDirection: 'row', gap: spacing.md },
   headerLink: { color: colors.primary, fontSize: fontSize.md, fontWeight: '600' },
   podHeader: { marginBottom: spacing.sm },
   inviteRow: {
@@ -227,5 +333,51 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: fontSize.sm,
     textAlign: 'center',
+  },
+});
+
+const gridStyles = StyleSheet.create({
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+  },
+  cell: {
+    width: '48.5%',
+    borderRadius: radius.sm,
+    borderWidth: 2,
+    overflow: 'hidden',
+    backgroundColor: colors.surfaceAlt,
+  },
+  art: {
+    width: '100%',
+    height: 80,
+  },
+  artPlaceholder: {
+    width: '100%',
+    height: 80,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surfaceAlt,
+  },
+  placeholderIcon: { fontSize: 28 },
+  nameBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.xs,
+    paddingTop: spacing.xs,
+    gap: 3,
+  },
+  crownIcon: { fontSize: 11 },
+  playerName: {
+    fontSize: fontSize.sm,
+    fontWeight: '700',
+    flexShrink: 1,
+  },
+  commanderText: {
+    color: colors.textMuted,
+    fontSize: 11,
+    paddingHorizontal: spacing.xs,
+    paddingBottom: spacing.xs,
   },
 });
