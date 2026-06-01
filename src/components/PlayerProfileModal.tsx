@@ -11,6 +11,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from './Button';
 import { CommanderSearch } from './CommanderSearch';
@@ -56,6 +57,7 @@ interface Props {
 export function PlayerProfileModal({ player, onClose }: Props) {
   const visible = player !== null;
   const playerId = player?.id ?? '';
+  const insets = useSafeAreaInsets();
 
   const commanders = usePlayerCommanders(playerId);
   const addCommander = useAddPlayerCommander(playerId);
@@ -93,77 +95,81 @@ export function PlayerProfileModal({ player, onClose }: Props) {
   }
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
-      <Pressable style={styles.backdrop} onPress={handleClose}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={styles.sheetWrapper}
+    <Modal visible={visible} animationType="slide" onRequestClose={handleClose}>
+      <KeyboardAvoidingView
+        style={[styles.screen, { paddingTop: insets.top }]}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.title} numberOfLines={1}>{player?.name}</Text>
+          <Pressable onPress={handleClose} hitSlop={8} style={styles.doneBtn}>
+            <Text style={styles.doneBtnText}>Done</Text>
+          </Pressable>
+        </View>
+
+        {/* Scrollable body */}
+        <ScrollView
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingBottom: insets.bottom + spacing.xl },
+          ]}
+          keyboardShouldPersistTaps="handled"
         >
-          <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
-            <View style={styles.handle} />
-            <Text style={styles.title}>{player?.name}</Text>
+          <Text style={styles.sectionLabel}>Commanders</Text>
 
-            <Text style={styles.sectionLabel}>Commanders</Text>
-
-            <ScrollView
-              style={styles.list}
-              contentContainerStyle={styles.listContent}
-              keyboardShouldPersistTaps="handled"
-              nestedScrollEnabled
-            >
-              {commanders.isLoading ? (
-                <ActivityIndicator color={colors.primary} style={{ marginVertical: spacing.md }} />
-              ) : commanders.data?.length === 0 ? (
-                <Text style={styles.empty}>No commanders saved yet.</Text>
-              ) : (
-                commanders.data?.map((c) => (
-                  <CommanderRow
-                    key={c.id}
-                    item={c}
-                    onDelete={() => deleteCommander.mutate(c.id)}
-                    deleting={deleteCommander.isPending}
-                  />
-                ))
-              )}
-            </ScrollView>
-
-            <View style={styles.divider} />
-
-            <View style={styles.addSection}>
-              <Text style={styles.sectionLabel}>Add commander</Text>
-              <View style={styles.searchRow}>
-                <CommanderSearch
-                  value={newCommander}
-                  onChange={setNewCommander}
-                  placeholder="Commander name"
+          {commanders.isLoading ? (
+            <ActivityIndicator color={colors.primary} style={{ marginVertical: spacing.md }} />
+          ) : commanders.data?.length === 0 ? (
+            <Text style={styles.empty}>No commanders saved yet.</Text>
+          ) : (
+            <View style={styles.commanderList}>
+              {commanders.data?.map((c) => (
+                <CommanderRow
+                  key={c.id}
+                  item={c}
+                  onDelete={() => deleteCommander.mutate(c.id)}
+                  deleting={deleteCommander.isPending}
                 />
-              </View>
-              {showPartner ? (
-                <View style={styles.searchRow}>
-                  <CommanderSearch
-                    value={newPartner}
-                    onChange={setNewPartner}
-                    placeholder="Partner commander"
-                  />
-                </View>
-              ) : (
-                <Pressable onPress={() => setShowPartner(true)} hitSlop={6}>
-                  <Text style={styles.addPartner}>＋ Add partner</Text>
-                </Pressable>
-              )}
-              {addError ? <Text style={styles.error}>{addError}</Text> : null}
-              <Button
-                label="Save commander"
-                onPress={handleAdd}
-                disabled={!newCommander.trim()}
-                loading={addCommander.isPending}
+              ))}
+            </View>
+          )}
+
+          <View style={styles.divider} />
+
+          <View style={styles.addSection}>
+            <Text style={styles.sectionLabel}>Add commander</Text>
+            <View style={styles.searchRow}>
+              <CommanderSearch
+                value={newCommander}
+                onChange={setNewCommander}
+                placeholder="Commander name"
               />
             </View>
-
-            <Button label="Done" variant="secondary" onPress={handleClose} />
-          </Pressable>
-        </KeyboardAvoidingView>
-      </Pressable>
+            {showPartner ? (
+              <View style={styles.searchRow}>
+                <CommanderSearch
+                  value={newPartner}
+                  onChange={setNewPartner}
+                  placeholder="Partner commander"
+                />
+              </View>
+            ) : (
+              <Pressable onPress={() => setShowPartner(true)} hitSlop={6}>
+                <Text style={styles.addPartner}>＋ Add partner</Text>
+              </Pressable>
+            )}
+            {addError ? <Text style={styles.error}>{addError}</Text> : null}
+            <Button
+              label="Save commander"
+              onPress={handleAdd}
+              disabled={!newCommander.trim()}
+              loading={addCommander.isPending}
+            />
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -275,34 +281,39 @@ const rowStyles = StyleSheet.create({
 });
 
 const styles = StyleSheet.create({
-  backdrop: {
+  screen: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'flex-end',
+    backgroundColor: colors.bg,
   },
-  sheetWrapper: { justifyContent: 'flex-end' },
-  sheet: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: radius.lg,
-    borderTopRightRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.lg,
-    gap: spacing.md,
-    maxHeight: '90%',
-  },
-  handle: {
-    alignSelf: 'center',
-    width: 36,
-    height: 4,
-    borderRadius: radius.pill,
-    backgroundColor: colors.border,
-    marginBottom: spacing.xs,
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    backgroundColor: colors.bg,
   },
   title: {
     color: colors.text,
     fontSize: fontSize.xl,
     fontWeight: '700',
+    flex: 1,
+    marginRight: spacing.md,
+  },
+  doneBtn: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  doneBtnText: {
+    color: colors.primary,
+    fontSize: fontSize.md,
+    fontWeight: '700',
+  },
+  scrollContent: {
+    padding: spacing.lg,
+    gap: spacing.lg,
   },
   sectionLabel: {
     color: colors.textMuted,
@@ -311,8 +322,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  list: { maxHeight: 280 },
-  listContent: { gap: spacing.sm },
+  commanderList: { gap: spacing.sm },
   empty: { color: colors.textMuted, fontSize: fontSize.sm },
   divider: {
     height: 1,
