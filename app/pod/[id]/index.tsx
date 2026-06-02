@@ -351,11 +351,11 @@ const gridStyles = StyleSheet.create({
   },
   art: {
     width: '100%',
-    height: 80,
+    height: 110,
   },
   artPlaceholder: {
     width: '100%',
-    height: 80,
+    height: 110,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surfaceAlt,

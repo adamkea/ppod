@@ -217,8 +217,8 @@ function CommanderRow({
 }
 
 function ArtThumbnail({ uri, size }: { uri: string | null; size: 'small' | 'large' }) {
-  const w = size === 'large' ? 80 : 60;
-  const h = size === 'large' ? 58 : 44;
+  const w = size === 'large' ? 120 : 85;
+  const h = size === 'large' ? 88 : 62;
 
   return (
     <View style={[thumbStyles.frame, { width: w, height: h }]}>
