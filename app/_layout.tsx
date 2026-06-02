@@ -14,20 +14,23 @@ export const unstable_settings = {
 };
 
 function RootNavigator() {
-  const { session, initializing } = useAuth();
+  const { session, initializing, isRecovery } = useAuth();
   const segments = useSegments();
   const router = useRouter();
 
   useEffect(() => {
     if (initializing) return;
     const inAuthGroup = segments[0] === 'sign-in';
+    const inResetScreen = segments[0] === 'reset-password';
 
-    if (!session && !inAuthGroup) {
+    if (isRecovery && !inResetScreen) {
+      router.replace('/reset-password');
+    } else if (!session && !inAuthGroup) {
       router.replace('/sign-in');
-    } else if (session && inAuthGroup) {
+    } else if (session && !isRecovery && inAuthGroup) {
       router.replace('/');
     }
-  }, [session, initializing, segments, router]);
+  }, [session, initializing, isRecovery, segments, router]);
 
   if (initializing) {
     return (
@@ -49,6 +52,7 @@ function RootNavigator() {
     >
       <Stack.Screen name="index" options={{ title: 'Your Pods' }} />
       <Stack.Screen name="sign-in" options={{ headerShown: false }} />
+      <Stack.Screen name="reset-password" options={{ headerShown: false }} />
       <Stack.Screen name="pod/[id]/index" options={{ title: 'Pod' }} />
       <Stack.Screen
         name="pod/[id]/add-game"

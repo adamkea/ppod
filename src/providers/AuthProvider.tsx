@@ -1,4 +1,5 @@
 import type { Session } from '@supabase/supabase-js';
+import * as Linking from 'expo-linking';
 import {
   createContext,
   useContext,
@@ -7,7 +8,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { AppState } from 'react-native';
+import { AppState, Platform } from 'react-native';
 
 import { supabase } from '@/lib/supabase';
 
@@ -15,10 +16,13 @@ interface AuthContextValue {
   session: Session | null;
   /** True until the persisted session has been read from storage. */
   initializing: boolean;
+  /** True when the user arrived via a password recovery link. */
+  isRecovery: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<{ needsConfirmation: boolean }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
+  updatePassword: (newPassword: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -35,6 +39,7 @@ AppState.addEventListener('change', (state) => {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [initializing, setInitializing] = useState(true);
+  const [isRecovery, setIsRecovery] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -42,17 +47,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setInitializing(false);
     });
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, next) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event, next) => {
       setSession(next);
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsRecovery(true);
+      }
     });
 
     return () => listener.subscription.unsubscribe();
+  }, []);
+
+  // On native, handle incoming deep links that carry the recovery token.
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+
+    function extractSession(url: string) {
+      const hash = url.split('#')[1];
+      if (!hash) return;
+      const params = new URLSearchParams(hash);
+      const accessToken = params.get('access_token');
+      const refreshToken = params.get('refresh_token');
+      if (accessToken && refreshToken) {
+        supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+      }
+    }
+
+    Linking.getInitialURL().then((url) => {
+      if (url) extractSession(url);
+    });
+
+    const sub = Linking.addEventListener('url', ({ url }) => extractSession(url));
+    return () => sub.remove();
   }, []);
 
   const value = useMemo<AuthContextValue>(
     () => ({
       session,
       initializing,
+      isRecovery,
       async signIn(email, password) {
         const { error } = await supabase.auth.signInWithPassword({
           email: email.trim(),
@@ -74,11 +106,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (error) throw error;
       },
       async resetPassword(email) {
-        const { error } = await supabase.auth.resetPasswordForEmail(email.trim());
+        const redirectTo = Linking.createURL('/reset-password');
+        const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+          redirectTo,
+        });
         if (error) throw error;
       },
+      async updatePassword(newPassword) {
+        const { error } = await supabase.auth.updateUser({ password: newPassword });
+        if (error) throw error;
+        setIsRecovery(false);
+      },
     }),
-    [session, initializing],
+    [session, initializing, isRecovery],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
