@@ -18,6 +18,7 @@ interface AuthContextValue {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<{ needsConfirmation: boolean }>;
   signOut: () => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -70,6 +71,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
       async signOut() {
         const { error } = await supabase.auth.signOut();
+        if (error) throw error;
+      },
+      async resetPassword(email) {
+        const { error } = await supabase.auth.resetPasswordForEmail(email.trim());
         if (error) throw error;
       },
     }),
