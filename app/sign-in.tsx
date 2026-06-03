@@ -16,17 +16,20 @@ import { useAuth } from '@/providers/AuthProvider';
 import { colors, fontSize, spacing } from '@/theme';
 
 export default function SignInScreen() {
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, resetPassword } = useAuth();
   const insets = useSafeAreaInsets();
 
-  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
+  const [mode, setMode] = useState<'signin' | 'signup' | 'forgot'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
-  const canSubmit = email.trim().length > 0 && password.length >= 6;
+  const canSubmit =
+    mode === 'forgot'
+      ? email.trim().length > 0
+      : email.trim().length > 0 && password.length >= 6;
 
   async function handleSubmit() {
     if (!canSubmit) return;
@@ -34,7 +37,11 @@ export default function SignInScreen() {
     setError(null);
     setNotice(null);
     try {
-      if (mode === 'signin') {
+      if (mode === 'forgot') {
+        await resetPassword(email);
+        setNotice('Check your email for a password reset link.');
+        setMode('signin');
+      } else if (mode === 'signin') {
         await signIn(email, password);
       } else {
         const { needsConfirmation } = await signUp(email, password);
@@ -44,7 +51,7 @@ export default function SignInScreen() {
         }
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not sign in.');
+      setError(e instanceof Error ? e.message : 'Something went wrong.');
     } finally {
       setSubmitting(false);
     }
@@ -64,7 +71,11 @@ export default function SignInScreen() {
       >
         <View style={styles.header}>
           <Text style={styles.title}>Pod Tracker</Text>
-          <Text style={styles.subtitle}>Log your Magic games with the crew.</Text>
+          <Text style={styles.subtitle}>
+            {mode === 'forgot'
+              ? "Enter your email and we'll send you a reset link."
+              : 'Log your Magic games with the crew.'}
+          </Text>
         </View>
 
         <View style={styles.form}>
@@ -78,38 +89,59 @@ export default function SignInScreen() {
             placeholder="you@example.com"
             textContentType="emailAddress"
           />
-          <TextField
-            label="Password"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            autoCapitalize="none"
-            placeholder="At least 6 characters"
-            textContentType={mode === 'signin' ? 'password' : 'newPassword'}
-          />
+          {mode !== 'forgot' && (
+            <TextField
+              label="Password"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              autoCapitalize="none"
+              placeholder="At least 6 characters"
+              textContentType={mode === 'signin' ? 'password' : 'newPassword'}
+            />
+          )}
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
           {notice ? <Text style={styles.notice}>{notice}</Text> : null}
 
           <Button
-            label={mode === 'signin' ? 'Sign in' : 'Create account'}
+            label={
+              mode === 'forgot'
+                ? 'Send reset link'
+                : mode === 'signin'
+                  ? 'Sign in'
+                  : 'Create account'
+            }
             onPress={handleSubmit}
             loading={submitting}
             disabled={!canSubmit}
           />
 
+          {mode === 'signin' && (
+            <Pressable
+              onPress={() => {
+                setError(null);
+                setNotice(null);
+                setMode('forgot');
+              }}
+              style={styles.switch}
+            >
+              <Text style={styles.switchText}>Forgot password?</Text>
+            </Pressable>
+          )}
+
           <Pressable
             onPress={() => {
-              setMode((m) => (m === 'signin' ? 'signup' : 'signin'));
+              setMode((m) => (m === 'signup' ? 'signin' : 'signup'));
               setError(null);
               setNotice(null);
             }}
             style={styles.switch}
           >
             <Text style={styles.switchText}>
-              {mode === 'signin'
-                ? "Don't have an account? Sign up"
-                : 'Already have an account? Sign in'}
+              {mode === 'signup'
+                ? 'Already have an account? Sign in'
+                : "Don't have an account? Sign up"}
             </Text>
           </Pressable>
         </View>
