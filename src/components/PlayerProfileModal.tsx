@@ -15,12 +15,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from './Button';
 import { CommanderSearch } from './CommanderSearch';
+import { PlayerStatsCharts } from './PlayerStatsCharts';
 import { colors, fontSize, radius, spacing } from '@/theme';
 import {
   useAddPlayerCommander,
   useDeletePlayerCommander,
   usePlayerCommanders,
 } from '@/hooks/usePlayerCommanders';
+import { usePlayerProfileStats } from '@/hooks/useStats';
 import type { Player, PlayerCommander } from '@/types/database';
 
 // Fetch the art_crop image URI for a single card name from Scryfall.
@@ -62,6 +64,7 @@ export function PlayerProfileModal({ player, onClose }: Props) {
   const commanders = usePlayerCommanders(playerId);
   const addCommander = useAddPlayerCommander(playerId);
   const deleteCommander = useDeletePlayerCommander(playerId);
+  const profileStats = usePlayerProfileStats(player?.pod_id ?? '', playerId);
 
   const [newCommander, setNewCommander] = useState('');
   const [newPartner, setNewPartner] = useState('');
@@ -117,6 +120,17 @@ export function PlayerProfileModal({ player, onClose }: Props) {
           ]}
           keyboardShouldPersistTaps="handled"
         >
+          <Text style={styles.sectionLabel}>Statistics</Text>
+          {profileStats.isLoading ? (
+            <ActivityIndicator color={colors.primary} style={{ marginVertical: spacing.md }} />
+          ) : profileStats.isError ? (
+            <Text style={styles.empty}>Couldn’t load stats.</Text>
+          ) : (
+            <PlayerStatsCharts stats={profileStats.stats} />
+          )}
+
+          <View style={styles.divider} />
+
           <Text style={styles.sectionLabel}>Commanders</Text>
 
           {commanders.isLoading ? (

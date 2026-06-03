@@ -65,3 +65,66 @@ export function commanderLabel(
 ): string {
   return [commander, partner].filter(Boolean).join(' + ');
 }
+
+/** Wins and games-played for a single commander (or partner pairing). */
+export interface CommanderStat {
+  label: string;
+  games: number;
+  wins: number;
+}
+
+/** A single player's record, overall and broken down by commander. */
+export interface PlayerProfileStats {
+  gamesPlayed: number;
+  wins: number;
+  losses: number;
+  winRate: number; // 0..1
+  byCommander: CommanderStat[]; // most wins first, then most games
+}
+
+/**
+ * Aggregate one player's results across every game they appear in, both
+ * overall and per commander. Commander rows are sorted by wins desc, then
+ * games desc, then label so the chart reads top-to-bottom by success.
+ */
+export function computePlayerProfileStats(
+  playerId: string,
+  games: GameWithPlayers[],
+): PlayerProfileStats {
+  let gamesPlayed = 0;
+  let wins = 0;
+  const commanders = new Map<string, CommanderStat>();
+
+  for (const game of games) {
+    for (const gp of game.game_players) {
+      if (gp.player_id !== playerId) continue;
+
+      gamesPlayed += 1;
+      if (gp.is_winner) wins += 1;
+
+      const label = commanderLabel(gp.commander, gp.partner_commander) || 'Unknown';
+      let entry = commanders.get(label);
+      if (!entry) {
+        entry = { label, games: 0, wins: 0 };
+        commanders.set(label, entry);
+      }
+      entry.games += 1;
+      if (gp.is_winner) entry.wins += 1;
+    }
+  }
+
+  const byCommander = [...commanders.values()].sort(
+    (a, b) =>
+      b.wins - a.wins ||
+      b.games - a.games ||
+      a.label.localeCompare(b.label),
+  );
+
+  return {
+    gamesPlayed,
+    wins,
+    losses: gamesPlayed - wins,
+    winRate: gamesPlayed > 0 ? wins / gamesPlayed : 0,
+    byCommander,
+  };
+}

@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 
-import { computePlayerStats } from '@/lib/stats';
+import { computePlayerProfileStats, computePlayerStats } from '@/lib/stats';
 import { useGames } from './useGames';
 import { usePlayers } from './usePlayers';
 
@@ -22,5 +22,21 @@ export function usePlayerStats(podId: string) {
       playersQuery.refetch();
       gamesQuery.refetch();
     },
+  };
+}
+
+/** One player's overall record plus a per-commander breakdown for charts. */
+export function usePlayerProfileStats(podId: string, playerId: string) {
+  const gamesQuery = useGames(podId);
+
+  const stats = useMemo(
+    () => computePlayerProfileStats(playerId, gamesQuery.data ?? []),
+    [playerId, gamesQuery.data],
+  );
+
+  return {
+    stats,
+    isLoading: gamesQuery.isLoading,
+    isError: gamesQuery.isError,
   };
 }
