@@ -1,5 +1,5 @@
 import { Stack, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '@/components/Button';
@@ -21,6 +21,18 @@ export default function PodsScreen() {
 
   const [dialog, setDialog] = useState<Dialog>('none');
   const [error, setError] = useState<string | null>(null);
+
+  // If the user belongs to exactly one pod, jump straight into it on load.
+  // Guarded so it only fires once — pushing (not replacing) keeps this list in
+  // the back stack so the pod's back button returns here to create/join more.
+  const didAutoNavigate = useRef(false);
+  useEffect(() => {
+    if (didAutoNavigate.current) return;
+    if (pods.isSuccess && pods.data.length === 1) {
+      didAutoNavigate.current = true;
+      router.push(`/pod/${pods.data[0].id}`);
+    }
+  }, [pods.isSuccess, pods.data, router]);
 
   function closeDialog() {
     setDialog('none');
