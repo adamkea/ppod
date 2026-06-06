@@ -65,6 +65,9 @@ export interface PlayerCommander {
   player_id: string;
   commander: string;
   partner_commander: string | null;
+  // Pinned Scryfall print ids for chosen alternate art; null = default printing.
+  commander_scryfall_id: string | null;
+  partner_scryfall_id: string | null;
   created_at: string;
 }
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -15,39 +15,29 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from './Button';
 import { CommanderSearch } from './CommanderSearch';
+import { CommanderArtPicker } from './CommanderArtPicker';
 import { colors, fontSize, radius, spacing } from '@/theme';
+import { useCommanderArt } from '@/hooks/useCardArt';
 import {
   useAddPlayerCommander,
   useDeletePlayerCommander,
+  useUpdatePlayerCommander,
   usePlayerCommanders,
 } from '@/hooks/usePlayerCommanders';
+import type { ScryfallArt } from '@/lib/scryfall';
 import type { Player, PlayerCommander } from '@/types/database';
 
-// Fetch the art_crop image URI for a single card name from Scryfall.
-async function fetchCardArt(name: string): Promise<string | null> {
-  try {
-    const res = await fetch(
-      `https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(name)}`,
-    );
-    if (!res.ok) return null;
-    const json = await res.json();
-    return (json.image_uris?.art_crop as string) ?? null;
-  } catch {
-    return null;
-  }
-}
-
-function useCardArt(name: string) {
-  const [uri, setUri] = useState<string | null>(null);
-  useEffect(() => {
-    let cancelled = false;
-    fetchCardArt(name).then((url) => {
-      if (!cancelled) setUri(url);
-    });
-    return () => { cancelled = true; };
-  }, [name]);
-  return uri;
-}
+// Which art the picker is currently editing: a side of the add-form, or a side
+// of an already-saved commander row.
+type ArtTarget =
+  | { mode: 'add'; side: 'main' | 'partner'; name: string; currentId: string | null }
+  | {
+      mode: 'edit';
+      commanderId: string;
+      side: 'main' | 'partner';
+      name: string;
+      currentId: string | null;
+    };
 
 interface Props {
   player: Player | null;
@@ -61,6 +51,7 @@ export function PlayerProfileModal({ player, onClose }: Props) {
 
   const commanders = usePlayerCommanders(playerId);
   const addCommander = useAddPlayerCommander(playerId);
+  const updateCommander = useUpdatePlayerCommander(playerId);
   const deleteCommander = useDeletePlayerCommander(playerId);
 
   const [newCommander, setNewCommander] = useState('');
@@ -68,11 +59,28 @@ export function PlayerProfileModal({ player, onClose }: Props) {
   const [showPartner, setShowPartner] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
 
+  // Chosen alternate art for the add-form (cleared when its name changes).
+  const [mainArt, setMainArt] = useState<ScryfallArt | null>(null);
+  const [partnerArt, setPartnerArt] = useState<ScryfallArt | null>(null);
+  const [artTarget, setArtTarget] = useState<ArtTarget | null>(null);
+
   function resetAddForm() {
     setNewCommander('');
     setNewPartner('');
     setShowPartner(false);
     setAddError(null);
+    setMainArt(null);
+    setPartnerArt(null);
+  }
+
+  // Editing the name invalidates any art picked for it.
+  function handleMainNameChange(text: string) {
+    setNewCommander(text);
+    setMainArt(null);
+  }
+  function handlePartnerNameChange(text: string) {
+    setNewPartner(text);
+    setPartnerArt(null);
   }
 
   async function handleAdd() {
@@ -82,6 +90,8 @@ export function PlayerProfileModal({ player, onClose }: Props) {
       await addCommander.mutateAsync({
         commander: newCommander.trim(),
         partnerCommander: showPartner ? newPartner.trim() : undefined,
+        commanderScryfallId: mainArt?.id ?? null,
+        partnerScryfallId: showPartner ? partnerArt?.id ?? null : null,
       });
       resetAddForm();
     } catch (e) {
@@ -89,8 +99,26 @@ export function PlayerProfileModal({ player, onClose }: Props) {
     }
   }
 
+  function handleArtSelected(art: ScryfallArt) {
+    if (!artTarget) return;
+    if (artTarget.mode === 'add') {
+      if (artTarget.side === 'main') setMainArt(art);
+      else setPartnerArt(art);
+    } else {
+      updateCommander.mutate({
+        id: artTarget.commanderId,
+        patch:
+          artTarget.side === 'main'
+            ? { commander_scryfall_id: art.id }
+            : { partner_scryfall_id: art.id },
+      });
+    }
+    setArtTarget(null);
+  }
+
   function handleClose() {
     resetAddForm();
+    setArtTarget(null);
     onClose();
   }
 
@@ -131,6 +159,16 @@ export function PlayerProfileModal({ player, onClose }: Props) {
                   item={c}
                   onDelete={() => deleteCommander.mutate(c.id)}
                   deleting={deleteCommander.isPending}
+                  onEditArt={(side) =>
+                    setArtTarget({
+                      mode: 'edit',
+                      commanderId: c.id,
+                      side,
+                      name: side === 'main' ? c.commander : c.partner_commander ?? '',
+                      currentId:
+                        side === 'main' ? c.commander_scryfall_id : c.partner_scryfall_id,
+                    })
+                  }
                 />
               ))}
             </View>
@@ -143,18 +181,44 @@ export function PlayerProfileModal({ player, onClose }: Props) {
             <View style={styles.searchRow}>
               <CommanderSearch
                 value={newCommander}
-                onChange={setNewCommander}
+                onChange={handleMainNameChange}
                 placeholder="Commander name"
               />
             </View>
+            <ArtChooser
+              name={newCommander}
+              art={mainArt}
+              onPress={() =>
+                setArtTarget({
+                  mode: 'add',
+                  side: 'main',
+                  name: newCommander.trim(),
+                  currentId: mainArt?.id ?? null,
+                })
+              }
+            />
             {showPartner ? (
-              <View style={styles.searchRow}>
-                <CommanderSearch
-                  value={newPartner}
-                  onChange={setNewPartner}
-                  placeholder="Partner commander"
+              <>
+                <View style={styles.searchRow}>
+                  <CommanderSearch
+                    value={newPartner}
+                    onChange={handlePartnerNameChange}
+                    placeholder="Partner commander"
+                  />
+                </View>
+                <ArtChooser
+                  name={newPartner}
+                  art={partnerArt}
+                  onPress={() =>
+                    setArtTarget({
+                      mode: 'add',
+                      side: 'partner',
+                      name: newPartner.trim(),
+                      currentId: partnerArt?.id ?? null,
+                    })
+                  }
                 />
-              </View>
+              </>
             ) : (
               <Pressable onPress={() => setShowPartner(true)} hitSlop={6}>
                 <Text style={styles.addPartner}>＋ Add partner</Text>
@@ -170,30 +234,88 @@ export function PlayerProfileModal({ player, onClose }: Props) {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <CommanderArtPicker
+        commanderName={artTarget?.name ?? null}
+        selectedId={artTarget?.currentId}
+        onSelect={handleArtSelected}
+        onClose={() => setArtTarget(null)}
+      />
     </Modal>
   );
 }
+
+// A compact "Choose art" affordance shown under a commander name in the add
+// form, previewing the picked artwork once chosen.
+function ArtChooser({
+  name,
+  art,
+  onPress,
+}: {
+  name: string;
+  art: ScryfallArt | null;
+  onPress: () => void;
+}) {
+  if (!name.trim()) return null;
+  return (
+    <Pressable style={chooserStyles.row} onPress={onPress} hitSlop={6}>
+      {art?.artCrop ? (
+        <Image source={{ uri: art.artCrop }} style={chooserStyles.thumb} resizeMode="cover" />
+      ) : (
+        <View style={[chooserStyles.thumb, chooserStyles.thumbPlaceholder]}>
+          <Text style={chooserStyles.thumbIcon}>🃏</Text>
+        </View>
+      )}
+      <Text style={chooserStyles.label}>
+        {art ? `Art: ${art.setName}` : 'Choose art (optional)'}
+      </Text>
+      <Text style={chooserStyles.chevron}>›</Text>
+    </Pressable>
+  );
+}
+
+const chooserStyles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  thumb: { width: 40, height: 30, borderRadius: radius.sm, backgroundColor: colors.surfaceAlt },
+  thumbPlaceholder: { alignItems: 'center', justifyContent: 'center' },
+  thumbIcon: { fontSize: 16 },
+  label: { flex: 1, color: colors.primary, fontSize: fontSize.sm, fontWeight: '600' },
+  chevron: { color: colors.textMuted, fontSize: fontSize.lg },
+});
 
 function CommanderRow({
   item,
   onDelete,
   deleting,
+  onEditArt,
 }: {
   item: PlayerCommander;
   onDelete: () => void;
   deleting: boolean;
+  onEditArt: (side: 'main' | 'partner') => void;
 }) {
-  const mainArt = useCardArt(item.commander);
-  const partnerArt = useCardArt(item.partner_commander ?? '');
+  const mainArt = useCommanderArt(item.commander, item.commander_scryfall_id);
+  const partnerArt = useCommanderArt(item.partner_commander, item.partner_scryfall_id);
 
   const hasPartner = !!item.partner_commander;
 
   return (
     <View style={rowStyles.card}>
-      {/* Art thumbnail(s) */}
+      {/* Art thumbnail(s) — tap to choose alternate art */}
       <View style={rowStyles.artWrap}>
-        <ArtThumbnail uri={mainArt} size={hasPartner ? 'small' : 'large'} />
-        {hasPartner && <ArtThumbnail uri={partnerArt} size="small" />}
+        <ArtThumbnail
+          uri={mainArt.data ?? null}
+          size={hasPartner ? 'small' : 'large'}
+          onPress={() => onEditArt('main')}
+        />
+        {hasPartner && (
+          <ArtThumbnail uri={partnerArt.data ?? null} size="small" onPress={() => onEditArt('partner')} />
+        )}
       </View>
 
       {/* Name(s) */}
@@ -216,12 +338,24 @@ function CommanderRow({
   );
 }
 
-function ArtThumbnail({ uri, size }: { uri: string | null; size: 'small' | 'large' }) {
+function ArtThumbnail({
+  uri,
+  size,
+  onPress,
+}: {
+  uri: string | null;
+  size: 'small' | 'large';
+  onPress?: () => void;
+}) {
   const w = size === 'large' ? 120 : 85;
   const h = size === 'large' ? 88 : 62;
 
   return (
-    <View style={[thumbStyles.frame, { width: w, height: h }]}>
+    <Pressable
+      onPress={onPress}
+      disabled={!onPress}
+      style={[thumbStyles.frame, { width: w, height: h }]}
+    >
       {uri ? (
         <Image source={{ uri }} style={thumbStyles.img} resizeMode="cover" />
       ) : (
@@ -229,7 +363,12 @@ function ArtThumbnail({ uri, size }: { uri: string | null; size: 'small' | 'larg
           <Text style={thumbStyles.placeholderText}>🃏</Text>
         </View>
       )}
-    </View>
+      {onPress ? (
+        <View style={thumbStyles.editBadge}>
+          <Text style={thumbStyles.editIcon}>✎</Text>
+        </View>
+      ) : null}
+    </Pressable>
   );
 }
 
@@ -242,6 +381,18 @@ const thumbStyles = StyleSheet.create({
   img: { width: '100%', height: '100%' },
   placeholder: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   placeholderText: { fontSize: 20 },
+  editBadge: {
+    position: 'absolute',
+    bottom: 2,
+    right: 2,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  editIcon: { color: '#fff', fontSize: 11 },
 });
 
 const rowStyles = StyleSheet.create({

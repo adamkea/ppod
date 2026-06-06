@@ -9,6 +9,7 @@ import { Card, EmptyState, ErrorState, Loading } from '@/components/ui';
 import { useGames } from '@/hooks/useGames';
 import { usePod, useRenamePod } from '@/hooks/usePods';
 import { formatDateHeading } from '@/lib/dates';
+import { fetchArtByName } from '@/lib/scryfall';
 import { commanderLabel, groupGamesByDate } from '@/lib/stats';
 import { useAuth } from '@/providers/AuthProvider';
 import { colors, fontSize, radius, spacing } from '@/theme';
@@ -158,19 +159,6 @@ function PodHeader({
   );
 }
 
-async function fetchCommanderArt(name: string): Promise<string | null> {
-  try {
-    const res = await fetch(
-      `https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(name)}`,
-    );
-    if (!res.ok) return null;
-    const json = await res.json();
-    return (json.image_uris?.art_crop as string) ?? null;
-  } catch {
-    return null;
-  }
-}
-
 function CommanderCell({
   name,
   commander,
@@ -184,7 +172,7 @@ function CommanderCell({
 
   useEffect(() => {
     if (commander) {
-      fetchCommanderArt(commander).then(setArtUri);
+      fetchArtByName(commander).then(setArtUri);
     }
   }, [commander]);
 
