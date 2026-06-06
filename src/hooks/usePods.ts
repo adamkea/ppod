@@ -1,12 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import * as podsApi from '@/api/pods';
+import { useAuth } from '@/providers/AuthProvider';
 import { queryKeys } from './queryKeys';
 
 export function usePods() {
+  const { session } = useAuth();
   return useQuery({
     queryKey: queryKeys.pods,
     queryFn: podsApi.listMyPods,
+    // Don't fetch until authenticated — an unauthenticated query returns an
+    // empty list (RLS) with no error, which would otherwise be cached and
+    // shown as "no pods" until a manual refresh.
+    enabled: !!session,
   });
 }
 

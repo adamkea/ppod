@@ -1,4 +1,5 @@
 import type { Session } from '@supabase/supabase-js';
+import { useQueryClient } from '@tanstack/react-query';
 import * as Linking from 'expo-linking';
 import {
   createContext,
@@ -37,6 +38,7 @@ AppState.addEventListener('change', (state) => {
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient();
   const [session, setSession] = useState<Session | null>(null);
   const [initializing, setInitializing] = useState(true);
   const [isRecovery, setIsRecovery] = useState(false);
@@ -52,10 +54,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (event === 'PASSWORD_RECOVERY') {
         setIsRecovery(true);
       }
+      // The query keys (e.g. ['pods']) aren't user-scoped, so drop any cached
+      // data on sign-out to avoid showing the previous user's pods.
+      if (event === 'SIGNED_OUT') {
+        queryClient.clear();
+      }
     });
 
     return () => listener.subscription.unsubscribe();
-  }, []);
+  }, [queryClient]);
 
   // On native, handle incoming deep links that carry the recovery token.
   useEffect(() => {
