@@ -42,6 +42,9 @@ export interface GamePlayer {
   player_id: string;
   commander: string | null;
   partner_commander: string | null;
+  // Pinned Scryfall print ids for chosen alternate art; null = default printing.
+  commander_scryfall_id: string | null;
+  partner_scryfall_id: string | null;
   is_winner: boolean;
 }
 
@@ -56,6 +59,8 @@ export interface ParticipantInput {
   player_id: string;
   commander: string;
   partner_commander: string;
+  commander_scryfall_id: string | null;
+  partner_scryfall_id: string | null;
   is_winner: boolean;
 }
 

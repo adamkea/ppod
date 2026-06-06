@@ -1,5 +1,5 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Image, Pressable, SectionList, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -8,8 +8,8 @@ import { PromptModal } from '@/components/PromptModal';
 import { Card, EmptyState, ErrorState, Loading } from '@/components/ui';
 import { useGames } from '@/hooks/useGames';
 import { usePod, useRenamePod } from '@/hooks/usePods';
+import { useCommanderArt } from '@/hooks/useCardArt';
 import { formatDateHeading } from '@/lib/dates';
-import { fetchArtByName } from '@/lib/scryfall';
 import { commanderLabel, groupGamesByDate } from '@/lib/stats';
 import { useAuth } from '@/providers/AuthProvider';
 import { colors, fontSize, radius, spacing } from '@/theme';
@@ -162,19 +162,16 @@ function PodHeader({
 function CommanderCell({
   name,
   commander,
+  scryfallId,
   isWinner,
 }: {
   name: string;
   commander: string | null;
+  scryfallId: string | null;
   isWinner: boolean;
 }) {
-  const [artUri, setArtUri] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (commander) {
-      fetchArtByName(commander).then(setArtUri);
-    }
-  }, [commander]);
+  // Pinned art by print id when chosen, else the name's default printing.
+  const artUri = useCommanderArt(commander, scryfallId).data ?? null;
 
   const borderColor = isWinner ? colors.success : colors.danger;
 
@@ -229,6 +226,7 @@ function GameCard({
                   key={gp.id}
                   name={gp.players?.name ?? 'Unknown'}
                   commander={gp.commander}
+                  scryfallId={gp.commander_scryfall_id}
                   isWinner={gp.is_winner}
                 />
               ))}

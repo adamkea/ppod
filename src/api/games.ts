@@ -37,6 +37,8 @@ function toRpcParticipants(participants: ParticipantInput[]) {
     player_id: p.player_id,
     commander: p.commander,
     partner_commander: p.partner_commander,
+    commander_scryfall_id: p.commander_scryfall_id,
+    partner_scryfall_id: p.partner_scryfall_id,
     is_winner: p.is_winner,
   }));
 }

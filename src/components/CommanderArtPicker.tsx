@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useArtworks } from '@/hooks/useCardArt';
+import { useArtworks, useCommanderArt } from '@/hooks/useCardArt';
 import type { ScryfallArt } from '@/lib/scryfall';
 import { colors, fontSize, radius, spacing } from '@/theme';
 
@@ -83,6 +83,49 @@ export function CommanderArtPicker({ commanderName, selectedId, onSelect, onClos
     </Modal>
   );
 }
+
+// A compact "Choose art" affordance: a thumbnail preview of the currently
+// pinned art (by id, falling back to the name's default) plus a tap target that
+// opens the picker. Hidden until a commander name exists.
+export function ArtChooserRow({
+  name,
+  scryfallId,
+  onPress,
+}: {
+  name: string;
+  scryfallId: string | null;
+  onPress: () => void;
+}) {
+  const art = useCommanderArt(name, scryfallId);
+  if (!name.trim()) return null;
+  return (
+    <Pressable style={chooserStyles.row} onPress={onPress} hitSlop={6}>
+      {art.data ? (
+        <Image source={{ uri: art.data }} style={chooserStyles.thumb} resizeMode="cover" />
+      ) : (
+        <View style={[chooserStyles.thumb, chooserStyles.thumbPlaceholder]}>
+          <Text style={chooserStyles.thumbIcon}>🃏</Text>
+        </View>
+      )}
+      <Text style={chooserStyles.label}>{scryfallId ? 'Custom art ✓' : 'Choose art (optional)'}</Text>
+      <Text style={chooserStyles.chevron}>›</Text>
+    </Pressable>
+  );
+}
+
+const chooserStyles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  thumb: { width: 40, height: 30, borderRadius: radius.sm, backgroundColor: colors.surfaceAlt },
+  thumbPlaceholder: { alignItems: 'center', justifyContent: 'center' },
+  thumbIcon: { fontSize: 16 },
+  label: { flex: 1, color: colors.primary, fontSize: fontSize.sm, fontWeight: '600' },
+  chevron: { color: colors.textMuted, fontSize: fontSize.lg },
+});
 
 const ITEM_WIDTH = 150;
 
