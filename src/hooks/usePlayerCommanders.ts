@@ -14,8 +14,18 @@ export function usePlayerCommanders(playerId: string) {
 export function useAddPlayerCommander(playerId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (args: { commander: string; partnerCommander?: string }) =>
-      api.addPlayerCommander(playerId, args.commander, args.partnerCommander),
+    mutationFn: (input: api.AddCommanderInput) => api.addPlayerCommander(playerId, input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.playerCommanders(playerId) }),
+  });
+}
+
+export function useUpdatePlayerCommander(playerId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: {
+      id: string;
+      patch: { commander_scryfall_id?: string | null; partner_scryfall_id?: string | null };
+    }) => api.updatePlayerCommanderArt(args.id, args.patch),
     onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.playerCommanders(playerId) }),
   });
 }

@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
 import { CommanderSearch } from '@/components/CommanderSearch';
+import { ArtChooserRow, CommanderArtPicker } from '@/components/CommanderArtPicker';
 import { DateField } from '@/components/DateField';
 import { TextField } from '@/components/TextField';
 import { Card, EmptyState, Loading } from '@/components/ui';
@@ -24,6 +25,7 @@ import { usePod } from '@/hooks/usePods';
 import { todayISO } from '@/lib/dates';
 import { useAuth } from '@/providers/AuthProvider';
 import { commanderLabel } from '@/lib/stats';
+import type { ScryfallArt } from '@/lib/scryfall';
 import { colors, fontSize, radius, spacing } from '@/theme';
 import type { ParticipantInput, PlayerCommander } from '@/types/database';
 
@@ -33,6 +35,9 @@ interface Entry {
   partner: string;
   showPartner: boolean;
   isWinner: boolean;
+  // Pinned Scryfall print ids for chosen alternate art; null = default printing.
+  commanderArtId: string | null;
+  partnerArtId: string | null;
 }
 
 const emptyEntry: Entry = {
@@ -41,6 +46,16 @@ const emptyEntry: Entry = {
   partner: '',
   showPartner: false,
   isWinner: false,
+  commanderArtId: null,
+  partnerArtId: null,
+};
+
+// Which commander art the picker is currently editing.
+type ArtTarget = {
+  playerId: string;
+  side: 'main' | 'partner';
+  name: string;
+  currentId: string | null;
 };
 
 export default function AddGameScreen() {
@@ -65,6 +80,7 @@ export default function AddGameScreen() {
   const [gameType, setGameType] = useState('commander');
   const [entries, setEntries] = useState<Record<string, Entry>>({});
   const [error, setError] = useState<string | null>(null);
+  const [artTarget, setArtTarget] = useState<ArtTarget | null>(null);
 
   // Seed form state once the data it depends on has loaded.
   const initialized = useRef(false);
@@ -90,6 +106,8 @@ export default function AddGameScreen() {
           partner: gp.partner_commander ?? '',
           showPartner: !!gp.partner_commander,
           isWinner: gp.is_winner,
+          commanderArtId: gp.commander_scryfall_id,
+          partnerArtId: gp.partner_scryfall_id,
         };
       }
     }
@@ -109,16 +127,29 @@ export default function AddGameScreen() {
     setEntries((prev) => ({ ...prev, [playerId]: { ...prev[playerId], ...patch } }));
   }
 
+  function handleArtSelected(art: ScryfallArt) {
+    if (!artTarget) return;
+    update(
+      artTarget.playerId,
+      artTarget.side === 'main' ? { commanderArtId: art.id } : { partnerArtId: art.id },
+    );
+    setArtTarget(null);
+  }
+
   async function handleSave() {
     setError(null);
     const participants: ParticipantInput[] = orderedPlayers
       .filter((p) => entries[p.id]?.selected)
       .map((p) => {
         const e = entries[p.id];
+        const hasPartner = e.showPartner && !!e.partner.trim();
         return {
           player_id: p.id,
           commander: e.commander.trim(),
-          partner_commander: e.showPartner ? e.partner.trim() : '',
+          partner_commander: hasPartner ? e.partner.trim() : '',
+          // Only keep pinned art when the matching name is present.
+          commander_scryfall_id: e.commander.trim() ? e.commanderArtId : null,
+          partner_scryfall_id: hasPartner ? e.partnerArtId : null,
           is_winner: e.isWinner,
         };
       });
@@ -257,20 +288,50 @@ export default function AddGameScreen() {
                           commander: c.commander,
                           partner: c.partner_commander ?? '',
                           showPartner: !!c.partner_commander,
+                          // Carry the saved commander's chosen art over too.
+                          commanderArtId: c.commander_scryfall_id,
+                          partnerArtId: c.partner_scryfall_id,
                         })
                       }
                     />
                     <CommanderSearch
                       value={entry.commander}
-                      onChange={(t) => update(player.id, { commander: t })}
+                      // Editing the name invalidates any art pinned to the old name.
+                      onChange={(t) => update(player.id, { commander: t, commanderArtId: null })}
                       placeholder="Commander (optional)"
                     />
+                    <ArtChooserRow
+                      name={entry.commander}
+                      scryfallId={entry.commanderArtId}
+                      onPress={() =>
+                        setArtTarget({
+                          playerId: player.id,
+                          side: 'main',
+                          name: entry.commander.trim(),
+                          currentId: entry.commanderArtId,
+                        })
+                      }
+                    />
                     {entry.showPartner ? (
-                      <CommanderSearch
-                        value={entry.partner}
-                        onChange={(t) => update(player.id, { partner: t })}
-                        placeholder="Partner commander"
-                      />
+                      <>
+                        <CommanderSearch
+                          value={entry.partner}
+                          onChange={(t) => update(player.id, { partner: t, partnerArtId: null })}
+                          placeholder="Partner commander"
+                        />
+                        <ArtChooserRow
+                          name={entry.partner}
+                          scryfallId={entry.partnerArtId}
+                          onPress={() =>
+                            setArtTarget({
+                              playerId: player.id,
+                              side: 'partner',
+                              name: entry.partner.trim(),
+                              currentId: entry.partnerArtId,
+                            })
+                          }
+                        />
+                      </>
                     ) : (
                       <Pressable
                         onPress={() => update(player.id, { showPartner: true })}
@@ -300,6 +361,13 @@ export default function AddGameScreen() {
           loading={saving}
         />
       </View>
+
+      <CommanderArtPicker
+        commanderName={artTarget?.name ?? null}
+        selectedId={artTarget?.currentId}
+        onSelect={handleArtSelected}
+        onClose={() => setArtTarget(null)}
+      />
     </KeyboardAvoidingView>
   );
 }
