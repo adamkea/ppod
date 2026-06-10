@@ -32,6 +32,7 @@ export interface Game {
   pod_id: string;
   played_at: string; // YYYY-MM-DD
   game_type: string;
+  note: string | null;
   logged_by_user_id: string | null;
   created_at: string;
 }

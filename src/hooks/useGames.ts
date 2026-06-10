@@ -23,6 +23,7 @@ export function useGame(gameId: string) {
 interface SaveArgs {
   playedAt: string;
   gameType: string;
+  note: string;
   participants: ParticipantInput[];
 }
 

@@ -78,6 +78,7 @@ export default function AddGameScreen() {
 
   const [playedAt, setPlayedAt] = useState(todayISO());
   const [gameType, setGameType] = useState('commander');
+  const [note, setNote] = useState('');
   const [entries, setEntries] = useState<Record<string, Entry>>({});
   const [error, setError] = useState<string | null>(null);
   const [artTarget, setArtTarget] = useState<ArtTarget | null>(null);
@@ -97,6 +98,7 @@ export default function AddGameScreen() {
     if (isEditing && existingGame.data) {
       setPlayedAt(existingGame.data.played_at);
       setGameType(existingGame.data.game_type);
+      setNote(existingGame.data.note ?? '');
       // Only the participants who were actually in the game start selected.
       for (const id of Object.keys(next)) next[id].selected = false;
       for (const gp of existingGame.data.game_players) {
@@ -160,10 +162,11 @@ export default function AddGameScreen() {
     }
 
     try {
+      const noteText = note.trim();
       if (isEditing) {
-        await updateGame.mutateAsync({ playedAt, gameType, participants });
+        await updateGame.mutateAsync({ playedAt, gameType, note: noteText, participants });
       } else {
-        await logGame.mutateAsync({ playedAt, gameType, participants });
+        await logGame.mutateAsync({ playedAt, gameType, note: noteText, participants });
       }
       router.back();
     } catch (e) {
@@ -347,6 +350,16 @@ export default function AddGameScreen() {
           })}
         </View>
 
+        <TextField
+          label="Note (optional)"
+          value={note}
+          onChangeText={setNote}
+          placeholder="Anything memorable about this game?"
+          multiline
+          numberOfLines={3}
+          style={styles.noteInput}
+        />
+
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
         {isEditing && isOwner ? (
@@ -483,6 +496,11 @@ const styles = StyleSheet.create({
   winnerTextOn: { color: colors.winner },
   commanderArea: { gap: spacing.sm },
   addPartner: { color: colors.primary, fontSize: fontSize.sm, fontWeight: '600' },
+  noteInput: {
+    minHeight: 80,
+    paddingTop: spacing.md,
+    textAlignVertical: 'top',
+  },
   error: { color: colors.danger, fontSize: fontSize.sm },
   footer: {
     padding: spacing.lg,
