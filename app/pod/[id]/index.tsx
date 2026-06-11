@@ -254,6 +254,11 @@ function GameCard({
               })}
             </View>
           )}
+          {game.note ? (
+            <Text style={styles.note} numberOfLines={3}>
+              {game.note}
+            </Text>
+          ) : null}
         </Card>
       )}
     </Pressable>
@@ -292,6 +297,12 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: fontSize.sm,
     textTransform: 'capitalize',
+  },
+  note: {
+    color: colors.textMuted,
+    fontSize: fontSize.sm,
+    fontStyle: 'italic',
+    marginTop: spacing.xs,
   },
   participants: { gap: spacing.xs },
   participantRow: {

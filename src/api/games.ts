@@ -5,6 +5,7 @@ interface SaveGameInput {
   podId: string;
   playedAt: string; // YYYY-MM-DD
   gameType: string;
+  note: string;
   participants: ParticipantInput[];
 }
 
@@ -48,6 +49,7 @@ export async function logGame(input: SaveGameInput): Promise<void> {
     _pod_id: input.podId,
     _played_at: input.playedAt,
     _game_type: input.gameType,
+    _note: input.note,
     _participants: toRpcParticipants(input.participants),
   });
   if (error) throw error;
@@ -61,6 +63,7 @@ export async function updateGame(
     _game_id: gameId,
     _played_at: input.playedAt,
     _game_type: input.gameType,
+    _note: input.note,
     _participants: toRpcParticipants(input.participants),
   });
   if (error) throw error;
