@@ -13,6 +13,8 @@ import {
   usePlayers,
   useRenamePlayer,
 } from '@/hooks/usePlayers';
+import { usePod } from '@/hooks/usePods';
+import { useAuth } from '@/providers/AuthProvider';
 import { colors, fontSize, spacing } from '@/theme';
 import type { Player } from '@/types/database';
 
@@ -20,11 +22,15 @@ export default function PlayersScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const podId = id!;
   const insets = useSafeAreaInsets();
+  const { session } = useAuth();
 
+  const pod = usePod(podId);
   const players = usePlayers(podId);
   const addPlayer = useAddPlayer(podId);
   const renamePlayer = useRenamePlayer(podId);
   const deletePlayer = useDeletePlayer(podId);
+
+  const isOwner = pod.data?.owner_id === session?.user.id;
 
   const [adding, setAdding] = useState(false);
   const [renaming, setRenaming] = useState<Player | null>(null);
@@ -90,22 +96,26 @@ export default function PlayersScreen() {
                 <Text style={styles.name}>{item.name}</Text>
                 {item.user_id ? <Text style={styles.linked}>linked account</Text> : null}
               </Pressable>
-              <View style={styles.rowActions}>
-                <Pressable onPress={() => setRenaming(item)} hitSlop={8}>
-                  <Text style={styles.renameText}>Rename</Text>
-                </Pressable>
-                <Pressable onPress={() => confirmDelete(item)} hitSlop={8}>
-                  <Text style={styles.remove}>Remove</Text>
-                </Pressable>
-              </View>
+              {isOwner ? (
+                <View style={styles.rowActions}>
+                  <Pressable onPress={() => setRenaming(item)} hitSlop={8}>
+                    <Text style={styles.renameText}>Rename</Text>
+                  </Pressable>
+                  <Pressable onPress={() => confirmDelete(item)} hitSlop={8}>
+                    <Text style={styles.remove}>Remove</Text>
+                  </Pressable>
+                </View>
+              ) : null}
             </Card>
           )}
         />
       )}
 
-      <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.md }]}>
-        <Button label="＋ Add player" onPress={() => setAdding(true)} />
-      </View>
+      {isOwner ? (
+        <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.md }]}>
+          <Button label="＋ Add player" onPress={() => setAdding(true)} />
+        </View>
+      ) : null}
 
       <PromptModal
         visible={adding}
@@ -140,6 +150,7 @@ export default function PlayersScreen() {
 
       <PlayerProfileModal
         player={profilePlayer}
+        readOnly={!isOwner}
         onClose={() => setProfilePlayer(null)}
       />
     </View>

@@ -100,7 +100,7 @@ export default function PodDetailScreen() {
           renderItem={({ item }) => (
             <GameCard
               game={item}
-              canEdit
+              canEdit={isOwner}
               onPress={() =>
                 router.push({
                   pathname: `/pod/${podId}/add-game`,
@@ -125,13 +125,19 @@ export default function PodDetailScreen() {
       />
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.md }]}>
-        <Button
-          label="＋ Log game"
-          onPress={() => router.push(`/pod/${podId}/add-game`)}
-        />
         {isOwner ? (
+          <>
+            <Button
+              label="＋ Log game"
+              onPress={() => router.push(`/pod/${podId}/add-game`)}
+            />
+            <Text style={styles.ownerHint}>
+              You own this pod · share code {pod.data?.invite_code}
+            </Text>
+          </>
+        ) : pod.data ? (
           <Text style={styles.ownerHint}>
-            You own this pod · share code {pod.data?.invite_code}
+            View only · only the pod owner can log or edit games
           </Text>
         ) : null}
       </View>
@@ -201,6 +207,7 @@ function CommanderCell({
 
 function GameCard({
   game,
+  canEdit,
   onPress,
 }: {
   game: GameWithPlayers;
@@ -215,9 +222,9 @@ function GameCard({
   const useGrid = participants.length >= 2 && participants.length <= 4;
 
   return (
-    <Pressable onPress={onPress}>
+    <Pressable onPress={onPress} disabled={!canEdit}>
       {({ pressed }) => (
-        <Card style={[styles.gameCard, pressed && styles.pressed]}>
+        <Card style={[styles.gameCard, pressed && canEdit && styles.pressed]}>
           <Text style={styles.gameType}>{game.game_type}</Text>
           {useGrid ? (
             <View style={gridStyles.grid}>

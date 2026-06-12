@@ -193,11 +193,25 @@ export default function AddGameScreen() {
     ]);
   }
 
-  const loading = players.isLoading || (isEditing && existingGame.isLoading);
+  const loading = pod.isLoading || players.isLoading || (isEditing && existingGame.isLoading);
   const saving = logGame.isPending || updateGame.isPending;
 
   if (loading) {
     return <View style={styles.flex}><Loading label="Loading…" /></View>;
+  }
+
+  // The database rejects writes from non-owners; this just keeps them from
+  // landing on a form they can't submit (e.g. via a stale link).
+  if (pod.data && !isOwner) {
+    return (
+      <View style={styles.flex}>
+        <Stack.Screen options={{ title: isEditing ? 'Edit Game' : 'Log Game' }} />
+        <EmptyState
+          title="View only"
+          subtitle="Only the pod owner can log or edit games."
+        />
+      </View>
+    );
   }
 
   if (orderedPlayers.length === 0) {
