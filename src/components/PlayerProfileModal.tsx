@@ -41,10 +41,11 @@ type ArtTarget =
 
 interface Props {
   player: Player | null;
+  readOnly?: boolean;
   onClose: () => void;
 }
 
-export function PlayerProfileModal({ player, onClose }: Props) {
+export function PlayerProfileModal({ player, readOnly = false, onClose }: Props) {
   const visible = player !== null;
   const playerId = player?.id ?? '';
   const insets = useSafeAreaInsets();
@@ -157,6 +158,7 @@ export function PlayerProfileModal({ player, onClose }: Props) {
                 <CommanderRow
                   key={c.id}
                   item={c}
+                  readOnly={readOnly}
                   onDelete={() => deleteCommander.mutate(c.id)}
                   deleting={deleteCommander.isPending}
                   onEditArt={(side) =>
@@ -174,6 +176,8 @@ export function PlayerProfileModal({ player, onClose }: Props) {
             </View>
           )}
 
+          {readOnly ? null : (
+          <>
           <View style={styles.divider} />
 
           <View style={styles.addSection}>
@@ -232,6 +236,8 @@ export function PlayerProfileModal({ player, onClose }: Props) {
               loading={addCommander.isPending}
             />
           </View>
+          </>
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
 
@@ -290,11 +296,13 @@ const chooserStyles = StyleSheet.create({
 
 function CommanderRow({
   item,
+  readOnly,
   onDelete,
   deleting,
   onEditArt,
 }: {
   item: PlayerCommander;
+  readOnly: boolean;
   onDelete: () => void;
   deleting: boolean;
   onEditArt: (side: 'main' | 'partner') => void;
@@ -311,10 +319,14 @@ function CommanderRow({
         <ArtThumbnail
           uri={mainArt.data ?? null}
           size={hasPartner ? 'small' : 'large'}
-          onPress={() => onEditArt('main')}
+          onPress={readOnly ? undefined : () => onEditArt('main')}
         />
         {hasPartner && (
-          <ArtThumbnail uri={partnerArt.data ?? null} size="small" onPress={() => onEditArt('partner')} />
+          <ArtThumbnail
+            uri={partnerArt.data ?? null}
+            size="small"
+            onPress={readOnly ? undefined : () => onEditArt('partner')}
+          />
         )}
       </View>
 
@@ -331,9 +343,11 @@ function CommanderRow({
       </View>
 
       {/* Remove */}
-      <Pressable onPress={onDelete} disabled={deleting} hitSlop={8} style={rowStyles.removeBtn}>
-        <Text style={rowStyles.removeText}>✕</Text>
-      </Pressable>
+      {readOnly ? null : (
+        <Pressable onPress={onDelete} disabled={deleting} hitSlop={8} style={rowStyles.removeBtn}>
+          <Text style={rowStyles.removeText}>✕</Text>
+        </Pressable>
+      )}
     </View>
   );
 }
