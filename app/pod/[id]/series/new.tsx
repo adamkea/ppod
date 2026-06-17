@@ -19,7 +19,6 @@ import { usePod } from '@/hooks/usePods';
 import { useCreateSeries } from '@/hooks/useSeries';
 import { useAuth } from '@/providers/AuthProvider';
 import { colors, fontSize, radius, spacing } from '@/theme';
-import type { Player } from '@/types/database';
 
 export default function NewSeriesScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -35,8 +34,7 @@ export default function NewSeriesScreen() {
   const isOwner = pod.data?.owner_id === session?.user.id;
 
   const [name, setName] = useState('');
-  const [playerOneId, setPlayerOneId] = useState<string | null>(null);
-  const [playerTwoId, setPlayerTwoId] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [target, setTarget] = useState('');
   const [error, setError] = useState<string | null>(null);
 
@@ -45,14 +43,16 @@ export default function NewSeriesScreen() {
     [players.data],
   );
 
+  const selectedIds = orderedPlayers.filter((p) => selected[p.id]).map((p) => p.id);
+
+  function toggle(playerId: string) {
+    setSelected((prev) => ({ ...prev, [playerId]: !prev[playerId] }));
+  }
+
   async function handleCreate() {
     setError(null);
-    if (!playerOneId || !playerTwoId) {
-      setError('Pick both players.');
-      return;
-    }
-    if (playerOneId === playerTwoId) {
-      setError('Pick two different players.');
+    if (selectedIds.length < 2) {
+      setError('Pick at least two players for the series.');
       return;
     }
     let targetGames: number | null = null;
@@ -68,8 +68,7 @@ export default function NewSeriesScreen() {
     try {
       const series = await createSeries.mutateAsync({
         name,
-        playerOneId,
-        playerTwoId,
+        playerIds: selectedIds,
         targetGames,
       });
       // Replace so Back returns to the series list, not this form.
@@ -100,7 +99,7 @@ export default function NewSeriesScreen() {
         <Stack.Screen options={{ title: 'New Series' }} />
         <EmptyState
           title="Need two players"
-          subtitle="A series is 1 v 1. Add at least two players from the pod screen, then come back."
+          subtitle="Games in a series are 1 v 1. Add at least two players from the pod screen, then come back."
         />
       </View>
     );
@@ -124,20 +123,34 @@ export default function NewSeriesScreen() {
           placeholder="e.g. Bloomburrow draft"
         />
 
-        <PlayerPicker
-          label="Player one"
-          players={orderedPlayers}
-          selectedId={playerOneId}
-          disabledId={playerTwoId}
-          onSelect={setPlayerOneId}
-        />
-        <PlayerPicker
-          label="Player two"
-          players={orderedPlayers}
-          selectedId={playerTwoId}
-          disabledId={playerOneId}
-          onSelect={setPlayerTwoId}
-        />
+        <View style={styles.pickerWrap}>
+          <Text style={styles.pickerLabel}>
+            Players · {selectedIds.length} in series
+          </Text>
+          <Text style={styles.hint}>
+            Everyone in the draft. Each game is 1 v 1 between two of them.
+          </Text>
+          <View style={styles.chipRow}>
+            {orderedPlayers.map((p) => {
+              const active = !!selected[p.id];
+              return (
+                <Pressable
+                  key={p.id}
+                  onPress={() => toggle(p.id)}
+                  style={[styles.chip, active && styles.chipActive]}
+                  hitSlop={4}
+                >
+                  <Text
+                    style={[styles.chipText, active && styles.chipTextActive]}
+                    numberOfLines={1}
+                  >
+                    {active ? '✓ ' : ''}{p.name}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
 
         <TextField
           label="Target games (optional)"
@@ -164,52 +177,6 @@ export default function NewSeriesScreen() {
   );
 }
 
-function PlayerPicker({
-  label,
-  players,
-  selectedId,
-  disabledId,
-  onSelect,
-}: {
-  label: string;
-  players: Player[];
-  selectedId: string | null;
-  disabledId: string | null;
-  onSelect: (id: string) => void;
-}) {
-  return (
-    <View style={styles.pickerWrap}>
-      <Text style={styles.pickerLabel}>{label}</Text>
-      <View style={styles.chipRow}>
-        {players.map((p) => {
-          const active = p.id === selectedId;
-          const disabled = p.id === disabledId;
-          return (
-            <Pressable
-              key={p.id}
-              disabled={disabled}
-              onPress={() => onSelect(p.id)}
-              style={[
-                styles.chip,
-                active && styles.chipActive,
-                disabled && styles.chipDisabled,
-              ]}
-              hitSlop={4}
-            >
-              <Text
-                style={[styles.chipText, active && styles.chipTextActive]}
-                numberOfLines={1}
-              >
-                {p.name}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.bg },
   content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxl },
@@ -233,10 +200,9 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
     backgroundColor: 'rgba(124,92,255,0.15)',
   },
-  chipDisabled: { opacity: 0.35 },
   chipText: { color: colors.textMuted, fontSize: fontSize.sm, fontWeight: '600' },
   chipTextActive: { color: colors.primary },
-  hint: { color: colors.textMuted, fontSize: fontSize.sm, marginTop: -spacing.sm },
+  hint: { color: colors.textMuted, fontSize: fontSize.sm },
   error: { color: colors.danger, fontSize: fontSize.sm },
   footer: {
     padding: spacing.lg,

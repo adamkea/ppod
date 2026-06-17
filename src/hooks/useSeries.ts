@@ -19,6 +19,14 @@ export function useSeries(seriesId: string) {
   });
 }
 
+export function useSeriesPlayers(seriesId: string) {
+  return useQuery({
+    queryKey: queryKeys.seriesPlayers(seriesId),
+    queryFn: () => seriesApi.listSeriesPlayers(seriesId),
+    enabled: !!seriesId,
+  });
+}
+
 export function useSeriesGames(seriesId: string) {
   return useQuery({
     queryKey: queryKeys.seriesGames(seriesId),
@@ -29,8 +37,7 @@ export function useSeriesGames(seriesId: string) {
 
 interface CreateArgs {
   name: string;
-  playerOneId: string;
-  playerTwoId: string;
+  playerIds: string[];
   targetGames: number | null;
 }
 
@@ -51,6 +58,8 @@ export function useDeleteSeries(podId: string) {
 }
 
 interface LogArgs {
+  playerOneId: string;
+  playerTwoId: string;
   winnerPlayerId: string | null;
   playedAt: string;
   note: string;
@@ -62,7 +71,7 @@ export function useLogSeriesGame(podId: string, seriesId: string) {
     mutationFn: (args: LogArgs) => seriesApi.logSeriesGame({ seriesId, ...args }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.seriesGames(seriesId) });
-      // The pod's series list shows each series' running record.
+      // The pod's series list shows each series' standings.
       qc.invalidateQueries({ queryKey: queryKeys.seriesList(podId) });
     },
   });

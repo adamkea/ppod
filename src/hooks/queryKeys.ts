@@ -8,5 +8,6 @@ export const queryKeys = {
   playerCommanders: (playerId: string) => ['playerCommanders', playerId] as const,
   seriesList: (podId: string) => ['pod', podId, 'series'] as const,
   series: (seriesId: string) => ['series', seriesId] as const,
+  seriesPlayers: (seriesId: string) => ['series', seriesId, 'players'] as const,
   seriesGames: (seriesId: string) => ['series', seriesId, 'games'] as const,
 };

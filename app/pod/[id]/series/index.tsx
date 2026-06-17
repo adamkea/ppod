@@ -7,8 +7,8 @@ import { Button } from '@/components/Button';
 import { Card, EmptyState, ErrorState, Loading } from '@/components/ui';
 import { usePlayers } from '@/hooks/usePlayers';
 import { usePod } from '@/hooks/usePods';
-import { useSeriesGames, useSeriesList } from '@/hooks/useSeries';
-import { computeSeriesRecord } from '@/lib/series';
+import { useSeriesGames, useSeriesList, useSeriesPlayers } from '@/hooks/useSeries';
+import { computeStandings } from '@/lib/series';
 import { useAuth } from '@/providers/AuthProvider';
 import { colors, fontSize, radius, spacing } from '@/theme';
 import type { Series } from '@/types/database';
@@ -52,7 +52,7 @@ export default function SeriesListScreen() {
               title="No series yet"
               subtitle={
                 isOwner
-                  ? 'Start a series to track a head-to-head run of standard games.'
+                  ? 'Start a series to track standard games among a group of players.'
                   : 'The pod owner hasn’t started any series yet.'
               }
             />
@@ -61,9 +61,7 @@ export default function SeriesListScreen() {
             <SeriesRow
               series={item}
               nameById={nameById}
-              onPress={() =>
-                router.push(`/pod/${podId}/series/${item.id}`)
-              }
+              onPress={() => router.push(`/pod/${podId}/series/${item.id}`)}
             />
           )}
         />
@@ -90,39 +88,44 @@ function SeriesRow({
   nameById: Map<string, string>;
   onPress: () => void;
 }) {
+  const roster = useSeriesPlayers(series.id);
   const games = useSeriesGames(series.id);
-  const record = computeSeriesRecord(series, games.data ?? []);
 
-  const oneName = nameById.get(series.player_one_id) ?? 'Unknown';
-  const twoName = nameById.get(series.player_two_id) ?? 'Unknown';
+  const rosterIds = (roster.data ?? []).map((r) => r.player_id);
+  const standings = computeStandings(rosterIds, games.data ?? []);
+  const played = games.data?.length ?? 0;
+  const leader = standings[0];
+  const leaderHasWins = leader && leader.wins > 0;
 
-  const oneLeads = record.oneWins > record.twoWins;
-  const twoLeads = record.twoWins > record.oneWins;
+  const rosterNames = rosterIds
+    .map((pid) => nameById.get(pid) ?? 'Unknown')
+    .sort((a, b) => a.localeCompare(b))
+    .join(', ');
 
   return (
     <Pressable onPress={onPress}>
       {({ pressed }) => (
         <Card style={[styles.row, pressed && styles.pressed]}>
-          {series.name ? <Text style={styles.seriesName}>{series.name}</Text> : null}
-          <View style={styles.scoreRow}>
-            <Text style={[styles.side, oneLeads && styles.sideLead]} numberOfLines={1}>
-              {oneName}
-            </Text>
-            <Text style={styles.score}>
-              {record.oneWins} – {record.twoWins}
-            </Text>
-            <Text
-              style={[styles.side, styles.sideRight, twoLeads && styles.sideLead]}
-              numberOfLines={1}
-            >
-              {twoName}
-            </Text>
-          </View>
-          <Text style={styles.meta}>
-            {record.played} {record.played === 1 ? 'game' : 'games'}
-            {series.target_games ? ` of ${series.target_games}` : ''}
-            {record.draws ? ` · ${record.draws} draw${record.draws === 1 ? '' : 's'}` : ''}
+          <Text style={styles.seriesName} numberOfLines={1}>
+            {series.name || rosterNames || 'Series'}
           </Text>
+          {series.name && rosterNames ? (
+            <Text style={styles.roster} numberOfLines={1}>
+              {rosterNames}
+            </Text>
+          ) : null}
+          <View style={styles.metaRow}>
+            <Text style={styles.meta}>
+              {rosterIds.length} player{rosterIds.length === 1 ? '' : 's'} ·{' '}
+              {played} game{played === 1 ? '' : 's'}
+              {series.target_games ? ` of ${series.target_games}` : ''}
+            </Text>
+            {leaderHasWins ? (
+              <Text style={styles.leader} numberOfLines={1}>
+                👑 {nameById.get(leader.playerId) ?? 'Unknown'} ({leader.wins})
+              </Text>
+            ) : null}
+          </View>
         </Card>
       )}
     </Pressable>
@@ -132,25 +135,19 @@ function SeriesRow({
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.bg },
   list: { padding: spacing.lg, gap: spacing.md, flexGrow: 1 },
-  row: { gap: spacing.sm },
+  row: { gap: spacing.xs },
   pressed: { opacity: 0.7 },
   seriesName: { color: colors.text, fontSize: fontSize.md, fontWeight: '700' },
-  scoreRow: {
+  roster: { color: colors.textMuted, fontSize: fontSize.sm },
+  metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: spacing.sm,
+    marginTop: spacing.xs,
   },
-  side: { flex: 1, color: colors.textMuted, fontSize: fontSize.md, fontWeight: '600' },
-  sideRight: { textAlign: 'right' },
-  sideLead: { color: colors.text },
-  score: {
-    color: colors.text,
-    fontSize: fontSize.lg,
-    fontWeight: '800',
-    fontVariant: ['tabular-nums'],
-  },
-  meta: { color: colors.textMuted, fontSize: fontSize.sm },
+  meta: { color: colors.textMuted, fontSize: fontSize.sm, flexShrink: 1 },
+  leader: { color: colors.winner, fontSize: fontSize.sm, fontWeight: '700' },
   footer: {
     padding: spacing.lg,
     borderTopWidth: 1,
