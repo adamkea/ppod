@@ -27,6 +27,15 @@ export function useSeriesPlayers(seriesId: string) {
   });
 }
 
+// Every series game in the pod, for the main game log.
+export function usePodSeriesGames(podId: string) {
+  return useQuery({
+    queryKey: queryKeys.podSeriesGames(podId),
+    queryFn: () => seriesApi.listPodSeriesGames(podId),
+    enabled: !!podId,
+  });
+}
+
 export function useSeriesGames(seriesId: string) {
   return useQuery({
     queryKey: queryKeys.seriesGames(seriesId),
@@ -53,7 +62,11 @@ export function useDeleteSeries(podId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (seriesId: string) => seriesApi.deleteSeries(seriesId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.seriesList(podId) }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.seriesList(podId) });
+      // Deleting a series cascades its games out of the pod's main log.
+      qc.invalidateQueries({ queryKey: queryKeys.podSeriesGames(podId) });
+    },
   });
 }
 
@@ -73,6 +86,8 @@ export function useLogSeriesGame(podId: string, seriesId: string) {
       qc.invalidateQueries({ queryKey: queryKeys.seriesGames(seriesId) });
       // The pod's series list shows each series' standings.
       qc.invalidateQueries({ queryKey: queryKeys.seriesList(podId) });
+      // And the main game log shows series games inline.
+      qc.invalidateQueries({ queryKey: queryKeys.podSeriesGames(podId) });
     },
   });
 }
@@ -84,6 +99,7 @@ export function useDeleteSeriesGame(podId: string, seriesId: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.seriesGames(seriesId) });
       qc.invalidateQueries({ queryKey: queryKeys.seriesList(podId) });
+      qc.invalidateQueries({ queryKey: queryKeys.podSeriesGames(podId) });
     },
   });
 }

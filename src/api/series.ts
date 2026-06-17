@@ -1,5 +1,10 @@
 import { supabase } from '@/lib/supabase';
-import type { Series, SeriesGame, SeriesPlayer } from '@/types/database';
+import type {
+  Series,
+  SeriesGame,
+  SeriesGameWithSeries,
+  SeriesPlayer,
+} from '@/types/database';
 
 export async function listSeries(podId: string): Promise<Series[]> {
   const { data, error } = await supabase
@@ -78,6 +83,21 @@ export async function listSeriesGames(seriesId: string): Promise<SeriesGame[]> {
     .order('created_at', { ascending: false });
   if (error) throw error;
   return (data ?? []) as SeriesGame[];
+}
+
+// All series games across every series in a pod, newest first, joined with the
+// parent series' name. Powers the series rows in the pod's main game log.
+export async function listPodSeriesGames(
+  podId: string,
+): Promise<SeriesGameWithSeries[]> {
+  const { data, error } = await supabase
+    .from('series_games')
+    .select('*, series!inner(name, pod_id)')
+    .eq('series.pod_id', podId)
+    .order('played_at', { ascending: false })
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as SeriesGameWithSeries[];
 }
 
 interface LogSeriesGameInput {

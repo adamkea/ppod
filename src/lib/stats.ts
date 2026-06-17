@@ -1,4 +1,9 @@
-import type { GameWithPlayers, Player, PlayerStat } from '@/types/database';
+import type {
+  GameWithPlayers,
+  Player,
+  PlayerStat,
+  SeriesGameWithSeries,
+} from '@/types/database';
 
 /** Group games into date sections, newest date first. */
 export interface DateSection {
@@ -16,6 +21,56 @@ export function groupGamesByDate(games: GameWithPlayers[]): DateSection[] {
   return [...byDate.entries()]
     .sort((a, b) => (a[0] < b[0] ? 1 : -1))
     .map(([date, gs]) => ({ date, games: gs }));
+}
+
+// The pod's main log mixes regular games and series (1v1) games on one timeline.
+export type FeedItem =
+  | { kind: 'game'; key: string; played_at: string; created_at: string; game: GameWithPlayers }
+  | { kind: 'series'; key: string; played_at: string; created_at: string; seriesGame: SeriesGameWithSeries };
+
+export interface FeedSection {
+  date: string; // YYYY-MM-DD
+  items: FeedItem[];
+}
+
+/**
+ * Merge regular games and series games into one date-grouped feed, newest date
+ * first and, within a date, newest entry first (by created_at).
+ */
+export function groupFeedByDate(
+  games: GameWithPlayers[],
+  seriesGames: SeriesGameWithSeries[],
+): FeedSection[] {
+  const items: FeedItem[] = [
+    ...games.map((g): FeedItem => ({
+      kind: 'game',
+      key: `g:${g.id}`,
+      played_at: g.played_at,
+      created_at: g.created_at,
+      game: g,
+    })),
+    ...seriesGames.map((sg): FeedItem => ({
+      kind: 'series',
+      key: `s:${sg.id}`,
+      played_at: sg.played_at,
+      created_at: sg.created_at,
+      seriesGame: sg,
+    })),
+  ];
+
+  const byDate = new Map<string, FeedItem[]>();
+  for (const item of items) {
+    const bucket = byDate.get(item.played_at);
+    if (bucket) bucket.push(item);
+    else byDate.set(item.played_at, [item]);
+  }
+  for (const bucket of byDate.values()) {
+    bucket.sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
+  }
+
+  return [...byDate.entries()]
+    .sort((a, b) => (a[0] < b[0] ? 1 : -1))
+    .map(([date, its]) => ({ date, items: its }));
 }
 
 /**

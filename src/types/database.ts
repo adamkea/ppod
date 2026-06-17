@@ -109,6 +109,12 @@ export interface SeriesGame {
   created_at: string;
 }
 
+// A series game joined with its parent series' name — used to show series games
+// in the pod's main game log alongside regular games.
+export interface SeriesGameWithSeries extends SeriesGame {
+  series: Pick<Series, 'name'> | null;
+}
+
 // Derived per-player stats.
 export interface PlayerStat {
   player_id: string;
