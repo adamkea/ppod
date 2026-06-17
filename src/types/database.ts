@@ -77,6 +77,30 @@ export interface PlayerCommander {
   created_at: string;
 }
 
+// A head-to-head run of standard 1v1 games between two players (no commanders).
+// Open-ended: games are logged until the pod stops; `target_games` is just a
+// soft goal for display.
+export interface Series {
+  id: string;
+  pod_id: string;
+  name: string | null;
+  player_one_id: string;
+  player_two_id: string;
+  target_games: number | null;
+  created_at: string;
+}
+
+// One standard game within a series. `winner_player_id` is null for a draw,
+// otherwise one of the parent series' two players.
+export interface SeriesGame {
+  id: string;
+  series_id: string;
+  winner_player_id: string | null;
+  played_at: string; // YYYY-MM-DD
+  note: string | null;
+  created_at: string;
+}
+
 // Derived per-player stats.
 export interface PlayerStat {
   player_id: string;

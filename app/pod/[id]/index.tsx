@@ -62,6 +62,9 @@ export default function PodDetailScreen() {
                   <Text style={styles.headerLink}>Edit</Text>
                 </Pressable>
               )}
+              <Pressable onPress={() => router.push(`/pod/${podId}/series`)} hitSlop={8}>
+                <Text style={styles.headerLink}>Series</Text>
+              </Pressable>
               <Pressable onPress={() => router.push(`/pod/${podId}/stats`)} hitSlop={8}>
                 <Text style={styles.headerLink}>Stats</Text>
               </Pressable>
