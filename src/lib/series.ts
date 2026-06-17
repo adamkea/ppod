@@ -1,4 +1,4 @@
-import type { SeriesGame } from '@/types/database';
+import type { Series, SeriesGame, SeriesGameWithSeries } from '@/types/database';
 
 export interface PlayerStanding {
   playerId: string;
@@ -52,4 +52,54 @@ export function computeStandings(
   return [...standings.values()].sort(
     (a, b) => b.wins - a.wins || winRate(b) - winRate(a) || b.played - a.played,
   );
+}
+
+// A whole series condensed to a single row for the pod's main game log.
+export interface SeriesFeedSummary {
+  id: string;
+  name: string | null;
+  playedAt: string; // date the series sits at in the feed (its latest game)
+  createdAt: string; // tiebreak for ordering within a day
+  gameCount: number;
+  leaderPlayerId: string | null;
+  leaderWins: number;
+}
+
+/**
+ * Condense each series into one feed summary: its game count and current
+ * leader, anchored to its most recent game's date (or its creation date if no
+ * games have been logged yet) so an active series surfaces with its last game.
+ */
+export function summarizeSeriesForFeed(
+  seriesList: Series[],
+  seriesGames: SeriesGameWithSeries[],
+): SeriesFeedSummary[] {
+  const gamesBySeries = new Map<string, SeriesGameWithSeries[]>();
+  for (const g of seriesGames) {
+    const bucket = gamesBySeries.get(g.series_id);
+    if (bucket) bucket.push(g);
+    else gamesBySeries.set(g.series_id, [g]);
+  }
+
+  return seriesList.map((s) => {
+    const games = gamesBySeries.get(s.id) ?? [];
+    let playedAt = s.created_at.slice(0, 10);
+    let createdAt = s.created_at;
+    for (const g of games) {
+      if (g.played_at > playedAt) playedAt = g.played_at;
+      if (g.created_at > createdAt) createdAt = g.created_at;
+    }
+
+    const leader = computeStandings([], games).find((st) => st.wins > 0) ?? null;
+
+    return {
+      id: s.id,
+      name: s.name,
+      playedAt,
+      createdAt,
+      gameCount: games.length,
+      leaderPlayerId: leader?.playerId ?? null,
+      leaderWins: leader?.wins ?? 0,
+    };
+  });
 }

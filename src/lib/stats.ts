@@ -1,9 +1,5 @@
-import type {
-  GameWithPlayers,
-  Player,
-  PlayerStat,
-  SeriesGameWithSeries,
-} from '@/types/database';
+import type { SeriesFeedSummary } from '@/lib/series';
+import type { GameWithPlayers, Player, PlayerStat } from '@/types/database';
 
 /** Group games into date sections, newest date first. */
 export interface DateSection {
@@ -23,10 +19,10 @@ export function groupGamesByDate(games: GameWithPlayers[]): DateSection[] {
     .map(([date, gs]) => ({ date, games: gs }));
 }
 
-// The pod's main log mixes regular games and series (1v1) games on one timeline.
+// The pod's main log mixes regular games and whole series on one timeline.
 export type FeedItem =
   | { kind: 'game'; key: string; played_at: string; created_at: string; game: GameWithPlayers }
-  | { kind: 'series'; key: string; played_at: string; created_at: string; seriesGame: SeriesGameWithSeries };
+  | { kind: 'series'; key: string; played_at: string; created_at: string; series: SeriesFeedSummary };
 
 export interface FeedSection {
   date: string; // YYYY-MM-DD
@@ -34,12 +30,13 @@ export interface FeedSection {
 }
 
 /**
- * Merge regular games and series games into one date-grouped feed, newest date
- * first and, within a date, newest entry first (by created_at).
+ * Merge regular games and series summaries into one date-grouped feed, newest
+ * date first and, within a date, newest entry first (by created_at). Each
+ * series appears once, not once per game.
  */
 export function groupFeedByDate(
   games: GameWithPlayers[],
-  seriesGames: SeriesGameWithSeries[],
+  series: SeriesFeedSummary[],
 ): FeedSection[] {
   const items: FeedItem[] = [
     ...games.map((g): FeedItem => ({
@@ -49,12 +46,12 @@ export function groupFeedByDate(
       created_at: g.created_at,
       game: g,
     })),
-    ...seriesGames.map((sg): FeedItem => ({
+    ...series.map((s): FeedItem => ({
       kind: 'series',
-      key: `s:${sg.id}`,
-      played_at: sg.played_at,
-      created_at: sg.created_at,
-      seriesGame: sg,
+      key: `s:${s.id}`,
+      played_at: s.playedAt,
+      created_at: s.createdAt,
+      series: s,
     })),
   ];
 

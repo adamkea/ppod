@@ -9,13 +9,14 @@ import { Card, EmptyState, ErrorState, Loading } from '@/components/ui';
 import { useGames } from '@/hooks/useGames';
 import { usePlayers } from '@/hooks/usePlayers';
 import { usePod, useRenamePod } from '@/hooks/usePods';
-import { usePodSeriesGames } from '@/hooks/useSeries';
+import { usePodSeriesGames, useSeriesList } from '@/hooks/useSeries';
 import { useCommanderArt } from '@/hooks/useCardArt';
 import { formatDateHeading } from '@/lib/dates';
+import { summarizeSeriesForFeed, type SeriesFeedSummary } from '@/lib/series';
 import { commanderLabel, groupFeedByDate } from '@/lib/stats';
 import { useAuth } from '@/providers/AuthProvider';
 import { colors, fontSize, radius, spacing } from '@/theme';
-import type { GameWithPlayers, SeriesGameWithSeries } from '@/types/database';
+import type { GameWithPlayers } from '@/types/database';
 
 export default function PodDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -27,6 +28,7 @@ export default function PodDetailScreen() {
   const pod = usePod(podId);
   const games = useGames(podId);
   const players = usePlayers(podId);
+  const seriesList = useSeriesList(podId);
   const seriesGames = usePodSeriesGames(podId);
   const renamePod = useRenamePod();
 
@@ -51,13 +53,18 @@ export default function PodDetailScreen() {
     }
   }
 
+  const seriesSummaries = useMemo(
+    () => summarizeSeriesForFeed(seriesList.data ?? [], seriesGames.data ?? []),
+    [seriesList.data, seriesGames.data],
+  );
+
   const sections = useMemo(
     () =>
-      groupFeedByDate(games.data ?? [], seriesGames.data ?? []).map((s) => ({
+      groupFeedByDate(games.data ?? [], seriesSummaries).map((s) => ({
         title: formatDateHeading(s.date),
         data: s.items,
       })),
-    [games.data, seriesGames.data],
+    [games.data, seriesSummaries],
   );
 
   return (
@@ -93,9 +100,10 @@ export default function PodDetailScreen() {
           keyExtractor={(item) => item.key}
           contentContainerStyle={styles.list}
           stickySectionHeadersEnabled={false}
-          refreshing={games.isRefetching || seriesGames.isRefetching}
+          refreshing={games.isRefetching || seriesGames.isRefetching || seriesList.isRefetching}
           onRefresh={() => {
             games.refetch();
+            seriesList.refetch();
             seriesGames.refetch();
           }}
           ListHeaderComponent={
@@ -115,12 +123,10 @@ export default function PodDetailScreen() {
           )}
           renderItem={({ item }) =>
             item.kind === 'series' ? (
-              <SeriesGameCard
-                seriesGame={item.seriesGame}
+              <SeriesFeedCard
+                series={item.series}
                 nameById={nameById}
-                onPress={() =>
-                  router.push(`/pod/${podId}/series/${item.seriesGame.series_id}`)
-                }
+                onPress={() => router.push(`/pod/${podId}/series/${item.series.id}`)}
               />
             ) : (
               <GameCard
@@ -298,19 +304,19 @@ function GameCard({
   );
 }
 
-function SeriesGameCard({
-  seriesGame,
+function SeriesFeedCard({
+  series,
   nameById,
   onPress,
 }: {
-  seriesGame: SeriesGameWithSeries;
+  series: SeriesFeedSummary;
   nameById: Map<string, string>;
   onPress: () => void;
 }) {
-  const nameOf = (id: string) => nameById.get(id) ?? 'Unknown';
-  const oneWon = seriesGame.winner_player_id === seriesGame.player_one_id;
-  const twoWon = seriesGame.winner_player_id === seriesGame.player_two_id;
-  const isDraw = seriesGame.winner_player_id === null;
+  const hasGames = series.gameCount > 0;
+  const leaderName = series.leaderPlayerId
+    ? nameById.get(series.leaderPlayerId) ?? 'Unknown'
+    : null;
 
   return (
     <Pressable onPress={onPress}>
@@ -318,35 +324,22 @@ function SeriesGameCard({
         <Card style={[styles.gameCard, pressed && styles.pressed]}>
           <View style={styles.seriesBadgeRow}>
             <Text style={styles.seriesBadge}>SERIES</Text>
-            {seriesGame.series?.name ? (
-              <Text style={styles.seriesName} numberOfLines={1}>
-                {seriesGame.series.name}
+            <Text style={styles.seriesTitle} numberOfLines={1}>
+              {series.name || 'Series'}
+            </Text>
+          </View>
+          <View style={styles.seriesMatchup}>
+            <Text style={styles.seriesMeta}>
+              {hasGames
+                ? `${series.gameCount} game${series.gameCount === 1 ? '' : 's'}`
+                : 'No games yet'}
+            </Text>
+            {leaderName ? (
+              <Text style={styles.seriesLeader} numberOfLines={1}>
+                👑 {leaderName} ({series.leaderWins})
               </Text>
             ) : null}
           </View>
-          <View style={styles.seriesMatchup}>
-            <Text
-              style={[styles.seriesPlayer, oneWon && styles.winnerName]}
-              numberOfLines={1}
-            >
-              {oneWon ? '👑 ' : ''}
-              {nameOf(seriesGame.player_one_id)}
-            </Text>
-            <Text style={styles.vsText}>vs</Text>
-            <Text
-              style={[styles.seriesPlayer, styles.seriesPlayerRight, twoWon && styles.winnerName]}
-              numberOfLines={1}
-            >
-              {twoWon ? '👑 ' : ''}
-              {nameOf(seriesGame.player_two_id)}
-            </Text>
-          </View>
-          {isDraw ? <Text style={styles.drawText}>🤝 Draw</Text> : null}
-          {seriesGame.note ? (
-            <Text style={styles.note} numberOfLines={3}>
-              {seriesGame.note}
-            </Text>
-          ) : null}
         </Card>
       )}
     </Pressable>
@@ -414,12 +407,15 @@ const styles = StyleSheet.create({
     paddingVertical: 1,
     overflow: 'hidden',
   },
-  seriesName: { color: colors.textMuted, fontSize: fontSize.sm, flexShrink: 1 },
-  seriesMatchup: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  seriesPlayer: { flex: 1, color: colors.text, fontSize: fontSize.md },
-  seriesPlayerRight: { textAlign: 'right' },
-  vsText: { color: colors.textMuted, fontSize: fontSize.sm },
-  drawText: { color: colors.textMuted, fontSize: fontSize.sm },
+  seriesTitle: { color: colors.text, fontSize: fontSize.md, fontWeight: '700', flexShrink: 1 },
+  seriesMatchup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  seriesMeta: { color: colors.textMuted, fontSize: fontSize.sm, flexShrink: 1 },
+  seriesLeader: { color: colors.winner, fontSize: fontSize.sm, fontWeight: '700' },
   commander: {
     color: colors.textMuted,
     fontSize: fontSize.sm,
