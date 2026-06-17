@@ -1,6 +1,6 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
@@ -15,6 +15,7 @@ import {
   useSeriesGames,
   useSeriesPlayers,
 } from '@/hooks/useSeries';
+import { confirmAsync } from '@/lib/confirm';
 import { formatDateHeading, todayISO } from '@/lib/dates';
 import { computeStandings } from '@/lib/series';
 import { useAuth } from '@/providers/AuthProvider';
@@ -102,33 +103,30 @@ export default function SeriesDetailScreen() {
     );
   }
 
-  function confirmDeleteGame(game: SeriesGame) {
-    Alert.alert('Remove game', 'Remove this game from the series?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Remove', style: 'destructive', onPress: () => deleteGame.mutate(game.id) },
-    ]);
+  async function confirmDeleteGame(game: SeriesGame) {
+    const ok = await confirmAsync({
+      title: 'Remove game',
+      message: 'Remove this game from the series?',
+      confirmLabel: 'Remove',
+      destructive: true,
+    });
+    if (ok) deleteGame.mutate(game.id);
   }
 
-  function confirmDeleteSeries() {
-    Alert.alert(
-      'Delete series',
-      'This permanently removes the series and all its games. Continue?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteSeries.mutateAsync(s.id);
-              router.back();
-            } catch {
-              // Owner-only at RLS; failures are rare — leave the user on-screen.
-            }
-          },
-        },
-      ],
-    );
+  async function confirmDeleteSeries() {
+    const ok = await confirmAsync({
+      title: 'Delete series',
+      message: 'This permanently removes the series and all its games. Continue?',
+      confirmLabel: 'Delete',
+      destructive: true,
+    });
+    if (!ok) return;
+    try {
+      await deleteSeries.mutateAsync(s.id);
+      router.back();
+    } catch {
+      // Owner-only at RLS; failures are rare — leave the user on-screen.
+    }
   }
 
   const bothPicked = !!oneId && !!twoId;
