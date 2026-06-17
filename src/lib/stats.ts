@@ -1,3 +1,4 @@
+import type { SeriesFeedSummary } from '@/lib/series';
 import type { GameWithPlayers, Player, PlayerStat } from '@/types/database';
 
 /** Group games into date sections, newest date first. */
@@ -16,6 +17,57 @@ export function groupGamesByDate(games: GameWithPlayers[]): DateSection[] {
   return [...byDate.entries()]
     .sort((a, b) => (a[0] < b[0] ? 1 : -1))
     .map(([date, gs]) => ({ date, games: gs }));
+}
+
+// The pod's main log mixes regular games and whole series on one timeline.
+export type FeedItem =
+  | { kind: 'game'; key: string; played_at: string; created_at: string; game: GameWithPlayers }
+  | { kind: 'series'; key: string; played_at: string; created_at: string; series: SeriesFeedSummary };
+
+export interface FeedSection {
+  date: string; // YYYY-MM-DD
+  items: FeedItem[];
+}
+
+/**
+ * Merge regular games and series summaries into one date-grouped feed, newest
+ * date first and, within a date, newest entry first (by created_at). Each
+ * series appears once, not once per game.
+ */
+export function groupFeedByDate(
+  games: GameWithPlayers[],
+  series: SeriesFeedSummary[],
+): FeedSection[] {
+  const items: FeedItem[] = [
+    ...games.map((g): FeedItem => ({
+      kind: 'game',
+      key: `g:${g.id}`,
+      played_at: g.played_at,
+      created_at: g.created_at,
+      game: g,
+    })),
+    ...series.map((s): FeedItem => ({
+      kind: 'series',
+      key: `s:${s.id}`,
+      played_at: s.playedAt,
+      created_at: s.createdAt,
+      series: s,
+    })),
+  ];
+
+  const byDate = new Map<string, FeedItem[]>();
+  for (const item of items) {
+    const bucket = byDate.get(item.played_at);
+    if (bucket) bucket.push(item);
+    else byDate.set(item.played_at, [item]);
+  }
+  for (const bucket of byDate.values()) {
+    bucket.sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
+  }
+
+  return [...byDate.entries()]
+    .sort((a, b) => (a[0] < b[0] ? 1 : -1))
+    .map(([date, its]) => ({ date, items: its }));
 }
 
 /**

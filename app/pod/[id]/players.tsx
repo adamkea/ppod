@@ -1,6 +1,6 @@
 import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
@@ -14,6 +14,7 @@ import {
   useRenamePlayer,
 } from '@/hooks/usePlayers';
 import { usePod } from '@/hooks/usePods';
+import { confirmAsync } from '@/lib/confirm';
 import { useAuth } from '@/providers/AuthProvider';
 import { colors, fontSize, spacing } from '@/theme';
 import type { Player } from '@/types/database';
@@ -58,19 +59,14 @@ export default function PlayersScreen() {
     }
   }
 
-  function confirmDelete(player: Player) {
-    Alert.alert(
-      'Remove player',
-      `Remove "${player.name}"? Their past game entries will be removed too.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: () => deletePlayer.mutate(player.id),
-        },
-      ],
-    );
+  async function confirmDelete(player: Player) {
+    const ok = await confirmAsync({
+      title: 'Remove player',
+      message: `Remove "${player.name}"? Their past game entries will be removed too.`,
+      confirmLabel: 'Remove',
+      destructive: true,
+    });
+    if (ok) deletePlayer.mutate(player.id);
   }
 
   return (

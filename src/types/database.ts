@@ -77,6 +77,44 @@ export interface PlayerCommander {
   created_at: string;
 }
 
+// A run of standard 1v1 games (no commanders) among a roster of players.
+// Open-ended: games are logged until the pod stops; `target_games` is just a
+// soft goal for display. The roster lives in `series_players`.
+export interface Series {
+  id: string;
+  pod_id: string;
+  name: string | null;
+  target_games: number | null;
+  created_at: string;
+}
+
+// A player on a series' roster.
+export interface SeriesPlayer {
+  id: string;
+  series_id: string;
+  player_id: string;
+  created_at: string;
+}
+
+// One standard 1v1 game within a series, between two roster players.
+// `winner_player_id` is null for a draw, otherwise player_one_id or player_two_id.
+export interface SeriesGame {
+  id: string;
+  series_id: string;
+  player_one_id: string;
+  player_two_id: string;
+  winner_player_id: string | null;
+  played_at: string; // YYYY-MM-DD
+  note: string | null;
+  created_at: string;
+}
+
+// A series game joined with its parent series' name — used to show series games
+// in the pod's main game log alongside regular games.
+export interface SeriesGameWithSeries extends SeriesGame {
+  series: Pick<Series, 'name'> | null;
+}
+
 // Derived per-player stats.
 export interface PlayerStat {
   player_id: string;

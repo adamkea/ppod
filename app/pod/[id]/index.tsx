@@ -7,10 +7,13 @@ import { Button } from '@/components/Button';
 import { PromptModal } from '@/components/PromptModal';
 import { Card, EmptyState, ErrorState, Loading } from '@/components/ui';
 import { useGames } from '@/hooks/useGames';
+import { usePlayers } from '@/hooks/usePlayers';
 import { usePod, useRenamePod } from '@/hooks/usePods';
+import { usePodSeriesGames, useSeriesList } from '@/hooks/useSeries';
 import { useCommanderArt } from '@/hooks/useCardArt';
 import { formatDateHeading } from '@/lib/dates';
-import { commanderLabel, groupGamesByDate } from '@/lib/stats';
+import { summarizeSeriesForFeed, type SeriesFeedSummary } from '@/lib/series';
+import { commanderLabel, groupFeedByDate } from '@/lib/stats';
 import { useAuth } from '@/providers/AuthProvider';
 import { colors, fontSize, radius, spacing } from '@/theme';
 import type { GameWithPlayers } from '@/types/database';
@@ -24,9 +27,18 @@ export default function PodDetailScreen() {
 
   const pod = usePod(podId);
   const games = useGames(podId);
+  const players = usePlayers(podId);
+  const seriesList = useSeriesList(podId);
+  const seriesGames = usePodSeriesGames(podId);
   const renamePod = useRenamePod();
 
   const isOwner = pod.data?.owner_id === session?.user.id;
+
+  const nameById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const p of players.data ?? []) map.set(p.id, p.name);
+    return map;
+  }, [players.data]);
 
   const [renaming, setRenaming] = useState(false);
   const [renameError, setRenameError] = useState<string | null>(null);
@@ -41,13 +53,18 @@ export default function PodDetailScreen() {
     }
   }
 
+  const seriesSummaries = useMemo(
+    () => summarizeSeriesForFeed(seriesList.data ?? [], seriesGames.data ?? []),
+    [seriesList.data, seriesGames.data],
+  );
+
   const sections = useMemo(
     () =>
-      groupGamesByDate(games.data ?? []).map((s) => ({
+      groupFeedByDate(games.data ?? [], seriesSummaries).map((s) => ({
         title: formatDateHeading(s.date),
-        data: s.games,
+        data: s.items,
       })),
-    [games.data],
+    [games.data, seriesSummaries],
   );
 
   return (
@@ -62,6 +79,9 @@ export default function PodDetailScreen() {
                   <Text style={styles.headerLink}>Edit</Text>
                 </Pressable>
               )}
+              <Pressable onPress={() => router.push(`/pod/${podId}/series`)} hitSlop={8}>
+                <Text style={styles.headerLink}>Series</Text>
+              </Pressable>
               <Pressable onPress={() => router.push(`/pod/${podId}/stats`)} hitSlop={8}>
                 <Text style={styles.headerLink}>Stats</Text>
               </Pressable>
@@ -77,11 +97,15 @@ export default function PodDetailScreen() {
       ) : (
         <SectionList
           sections={sections}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => item.key}
           contentContainerStyle={styles.list}
           stickySectionHeadersEnabled={false}
-          refreshing={games.isRefetching}
-          onRefresh={() => games.refetch()}
+          refreshing={games.isRefetching || seriesGames.isRefetching || seriesList.isRefetching}
+          onRefresh={() => {
+            games.refetch();
+            seriesList.refetch();
+            seriesGames.refetch();
+          }}
           ListHeaderComponent={
             <PodHeader
               inviteCode={pod.data?.invite_code}
@@ -97,18 +121,26 @@ export default function PodDetailScreen() {
           renderSectionHeader={({ section }) => (
             <Text style={styles.sectionHeader}>{section.title}</Text>
           )}
-          renderItem={({ item }) => (
-            <GameCard
-              game={item}
-              canEdit={isOwner}
-              onPress={() =>
-                router.push({
-                  pathname: `/pod/${podId}/add-game`,
-                  params: { gameId: item.id },
-                })
-              }
-            />
-          )}
+          renderItem={({ item }) =>
+            item.kind === 'series' ? (
+              <SeriesFeedCard
+                series={item.series}
+                nameById={nameById}
+                onPress={() => router.push(`/pod/${podId}/series/${item.series.id}`)}
+              />
+            ) : (
+              <GameCard
+                game={item.game}
+                canEdit={isOwner}
+                onPress={() =>
+                  router.push({
+                    pathname: `/pod/${podId}/add-game`,
+                    params: { gameId: item.game.id },
+                  })
+                }
+              />
+            )
+          }
         />
       )}
 
@@ -272,6 +304,48 @@ function GameCard({
   );
 }
 
+function SeriesFeedCard({
+  series,
+  nameById,
+  onPress,
+}: {
+  series: SeriesFeedSummary;
+  nameById: Map<string, string>;
+  onPress: () => void;
+}) {
+  const hasGames = series.gameCount > 0;
+  const leaderName = series.leaderPlayerId
+    ? nameById.get(series.leaderPlayerId) ?? 'Unknown'
+    : null;
+
+  return (
+    <Pressable onPress={onPress}>
+      {({ pressed }) => (
+        <Card style={[styles.gameCard, pressed && styles.pressed]}>
+          <View style={styles.seriesBadgeRow}>
+            <Text style={styles.seriesBadge}>SERIES</Text>
+            <Text style={styles.seriesTitle} numberOfLines={1}>
+              {series.name || 'Series'}
+            </Text>
+          </View>
+          <View style={styles.seriesMatchup}>
+            <Text style={styles.seriesMeta}>
+              {hasGames
+                ? `${series.gameCount} game${series.gameCount === 1 ? '' : 's'}`
+                : 'No games yet'}
+            </Text>
+            {leaderName ? (
+              <Text style={styles.seriesLeader} numberOfLines={1}>
+                👑 {leaderName} ({series.leaderWins})
+              </Text>
+            ) : null}
+          </View>
+        </Card>
+      )}
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.bg },
   list: { padding: spacing.lg, gap: spacing.md, flexGrow: 1 },
@@ -320,6 +394,28 @@ const styles = StyleSheet.create({
   },
   participantName: { color: colors.text, fontSize: fontSize.md, flexShrink: 1 },
   winnerName: { color: colors.winner, fontWeight: '700' },
+  seriesBadgeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  seriesBadge: {
+    color: colors.primary,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    borderRadius: radius.sm,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    overflow: 'hidden',
+  },
+  seriesTitle: { color: colors.text, fontSize: fontSize.md, fontWeight: '700', flexShrink: 1 },
+  seriesMatchup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  seriesMeta: { color: colors.textMuted, fontSize: fontSize.sm, flexShrink: 1 },
+  seriesLeader: { color: colors.winner, fontSize: fontSize.sm, fontWeight: '700' },
   commander: {
     color: colors.textMuted,
     fontSize: fontSize.sm,

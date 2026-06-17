@@ -1,7 +1,6 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -22,6 +21,7 @@ import { useDeleteGame, useGame, useLogGame, useUpdateGame } from '@/hooks/useGa
 import { usePlayers } from '@/hooks/usePlayers';
 import { usePlayerCommanders } from '@/hooks/usePlayerCommanders';
 import { usePod } from '@/hooks/usePods';
+import { confirmAsync } from '@/lib/confirm';
 import { todayISO } from '@/lib/dates';
 import { useAuth } from '@/providers/AuthProvider';
 import { commanderLabel } from '@/lib/stats';
@@ -174,23 +174,21 @@ export default function AddGameScreen() {
     }
   }
 
-  function confirmDelete() {
+  async function confirmDelete() {
     if (!gameId) return;
-    Alert.alert('Delete game', 'This permanently removes the game. Continue?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await deleteGame.mutateAsync(gameId);
-            router.back();
-          } catch (e) {
-            setError(e instanceof Error ? e.message : 'Could not delete game.');
-          }
-        },
-      },
-    ]);
+    const ok = await confirmAsync({
+      title: 'Delete game',
+      message: 'This permanently removes the game. Continue?',
+      confirmLabel: 'Delete',
+      destructive: true,
+    });
+    if (!ok) return;
+    try {
+      await deleteGame.mutateAsync(gameId);
+      router.back();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not delete game.');
+    }
   }
 
   const loading = pod.isLoading || players.isLoading || (isEditing && existingGame.isLoading);
