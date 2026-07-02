@@ -1,29 +1,52 @@
 import {
-  ActivityIndicator,
   StyleSheet,
-  Text,
   View,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
+import {
+  ActivityIndicator,
+  Surface,
+  Text,
+  TouchableRipple,
+  useTheme,
+} from 'react-native-paper';
 
-import { colors, fontSize, radius, spacing } from '@/theme';
+import { radius, spacing } from '@/theme';
 
 export function Card({
   children,
   style,
+  onPress,
+  disabled,
 }: {
   children: React.ReactNode;
   style?: StyleProp<ViewStyle>;
+  onPress?: () => void;
+  disabled?: boolean;
 }) {
-  return <View style={[styles.card, style]}>{children}</View>;
+  return (
+    <Surface mode="flat" elevation={2} style={styles.card}>
+      {onPress ? (
+        <TouchableRipple onPress={onPress} disabled={disabled} borderless>
+          <View style={[styles.cardContent, style]}>{children}</View>
+        </TouchableRipple>
+      ) : (
+        <View style={[styles.cardContent, style]}>{children}</View>
+      )}
+    </Surface>
+  );
 }
 
 export function Loading({ label }: { label?: string }) {
   return (
     <View style={styles.center}>
-      <ActivityIndicator color={colors.primary} />
-      {label ? <Text style={styles.muted}>{label}</Text> : null}
+      <ActivityIndicator />
+      {label ? (
+        <Text variant="bodyMedium" style={styles.muted}>
+          {label}
+        </Text>
+      ) : null}
     </View>
   );
 }
@@ -37,31 +60,40 @@ export function EmptyState({
 }) {
   return (
     <View style={styles.center}>
-      <Text style={styles.emptyTitle}>{title}</Text>
-      {subtitle ? <Text style={styles.muted}>{subtitle}</Text> : null}
+      <Text variant="titleMedium" style={styles.centeredText}>
+        {title}
+      </Text>
+      {subtitle ? (
+        <Text variant="bodyMedium" style={styles.muted}>
+          {subtitle}
+        </Text>
+      ) : null}
     </View>
   );
 }
 
-export function ErrorState({
-  message,
-}: {
-  message?: string;
-}) {
+export function ErrorState({ message }: { message?: string }) {
+  const theme = useTheme();
   return (
     <View style={styles.center}>
-      <Text style={styles.errorTitle}>Something went wrong</Text>
-      {message ? <Text style={styles.muted}>{message}</Text> : null}
+      <Text variant="titleMedium" style={{ color: theme.colors.error }}>
+        Something went wrong
+      </Text>
+      {message ? (
+        <Text variant="bodyMedium" style={styles.muted}>
+          {message}
+        </Text>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.surface,
     borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
+    overflow: 'hidden',
+  },
+  cardContent: {
     padding: spacing.lg,
   },
   center: {
@@ -71,20 +103,6 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     padding: spacing.xl,
   },
-  emptyTitle: {
-    color: colors.text,
-    fontSize: fontSize.lg,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  errorTitle: {
-    color: colors.danger,
-    fontSize: fontSize.lg,
-    fontWeight: '600',
-  },
-  muted: {
-    color: colors.textMuted,
-    fontSize: fontSize.md,
-    textAlign: 'center',
-  },
+  centeredText: { textAlign: 'center' },
+  muted: { opacity: 0.7, textAlign: 'center' },
 });

@@ -1,15 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import {
   ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
+  Divider,
+  Surface,
   Text,
   TextInput,
-  View,
-} from 'react-native';
+  TouchableRipple,
+} from 'react-native-paper';
 
-import { colors, fontSize, radius, spacing } from '@/theme';
+import { radius, spacing } from '@/theme';
 
 interface Props {
   value: string;
@@ -73,42 +73,42 @@ export function CommanderSearch({ value, onChange, placeholder = 'Commander (opt
 
   return (
     <View style={styles.container}>
-      <View style={styles.inputRow}>
-        <TextInput
-          style={styles.input}
-          value={query}
-          onChangeText={handleChangeText}
-          placeholder={placeholder}
-          placeholderTextColor={colors.textMuted}
-          autoCapitalize="words"
-          autoCorrect={false}
-        />
-        {loading ? (
-          <ActivityIndicator size="small" color={colors.primary} style={styles.spinner} />
-        ) : null}
-      </View>
+      <TextInput
+        mode="outlined"
+        dense
+        value={query}
+        onChangeText={handleChangeText}
+        placeholder={placeholder}
+        autoCapitalize="words"
+        autoCorrect={false}
+        right={
+          loading ? (
+            <TextInput.Icon icon={() => <ActivityIndicator size={18} />} />
+          ) : undefined
+        }
+      />
 
       {open ? (
-        <View style={[styles.dropdown, suggestions.length > 5 && styles.dropdownScroll]}>
+        <Surface
+          mode="flat"
+          elevation={4}
+          style={[styles.dropdown, suggestions.length > 5 && styles.dropdownScroll]}
+        >
           <ScrollView
             keyboardShouldPersistTaps="handled"
             scrollEnabled={suggestions.length > 5}
             nestedScrollEnabled
           >
             {suggestions.map((item, index) => (
-              <Pressable
-                key={item}
-                style={[
-                  styles.suggestion,
-                  index < suggestions.length - 1 && styles.suggestionBorder,
-                ]}
-                onPress={() => selectSuggestion(item)}
-              >
-                <Text style={styles.suggestionText}>{item}</Text>
-              </Pressable>
+              <View key={item}>
+                <TouchableRipple style={styles.suggestion} onPress={() => selectSuggestion(item)}>
+                  <Text variant="bodyMedium">{item}</Text>
+                </TouchableRipple>
+                {index < suggestions.length - 1 ? <Divider /> : null}
+              </View>
             ))}
           </ScrollView>
-        </View>
+        </Surface>
       ) : null}
     </View>
   );
@@ -116,50 +116,19 @@ export function CommanderSearch({ value, onChange, placeholder = 'Commander (opt
 
 const styles = StyleSheet.create({
   container: { position: 'relative', zIndex: 10 },
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surfaceAlt,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    minHeight: 48,
-  },
-  input: {
-    flex: 1,
-    color: colors.text,
-    fontSize: fontSize.md,
-  },
-  spinner: { marginLeft: spacing.sm },
   dropdown: {
     position: 'absolute',
-    top: 50,
+    top: 52,
     left: 0,
     right: 0,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
     borderRadius: radius.md,
     overflow: 'hidden',
     zIndex: 100,
-    elevation: 8, // Android shadow
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    elevation: 8, // Android stacking
   },
   dropdownScroll: { maxHeight: 220 },
   suggestion: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
-  },
-  suggestionBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  suggestionText: {
-    color: colors.text,
-    fontSize: fontSize.md,
   },
 });

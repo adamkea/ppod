@@ -1,16 +1,21 @@
 import { createElement } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text, useTheme } from 'react-native-paper';
 
 import { toISODate } from '@/lib/dates';
-import { colors, fontSize, radius, spacing } from '@/theme';
+import { radius, spacing } from '@/theme';
 import type { DateFieldProps } from './DateField';
 
 // Web implementation: a real <input type="date"> gives a proper, accessible
 // browser date picker instead of relying on the native module's web shim.
+// Styled to sit alongside Paper's outlined text inputs.
 export function DateField({ label = 'Date', value, onChange, maximumDate }: DateFieldProps) {
+  const theme = useTheme();
   return (
     <View style={styles.wrap}>
-      <Text style={styles.label}>{label}</Text>
+      <Text variant="labelMedium" style={{ color: theme.colors.onSurfaceVariant }}>
+        {label}
+      </Text>
       {createElement('input', {
         type: 'date',
         value,
@@ -19,13 +24,13 @@ export function DateField({ label = 'Date', value, onChange, maximumDate }: Date
           if (e.target.value) onChange(e.target.value);
         },
         style: {
-          backgroundColor: colors.surfaceAlt,
-          color: colors.text,
-          border: `1px solid ${colors.border}`,
+          backgroundColor: theme.colors.surfaceVariant,
+          color: theme.colors.onSurface,
+          border: `1px solid ${theme.colors.outline}`,
           borderRadius: radius.md,
-          minHeight: 48,
+          minHeight: 50,
           padding: `0 ${spacing.md}px`,
-          fontSize: fontSize.md,
+          fontSize: 15,
           fontFamily: 'inherit',
           colorScheme: 'dark',
           width: '100%',
@@ -38,5 +43,4 @@ export function DateField({ label = 'Date', value, onChange, maximumDate }: Date
 
 const styles = StyleSheet.create({
   wrap: { gap: spacing.xs },
-  label: { color: colors.textMuted, fontSize: fontSize.sm, fontWeight: '600' },
 });

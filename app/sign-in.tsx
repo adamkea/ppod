@@ -2,22 +2,22 @@ import { useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
+import { Button as PaperButton, Text, useTheme } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
 import { TextField } from '@/components/TextField';
 import { useAuth } from '@/providers/AuthProvider';
-import { colors, fontSize, spacing } from '@/theme';
+import { colors, spacing } from '@/theme';
 
 export default function SignInScreen() {
   const { signIn, signUp, resetPassword } = useAuth();
   const insets = useSafeAreaInsets();
+  const theme = useTheme();
 
   const [mode, setMode] = useState<'signin' | 'signup' | 'forgot'>('signin');
   const [email, setEmail] = useState('');
@@ -70,8 +70,10 @@ export default function SignInScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.header}>
-          <Text style={styles.title}>Pod Tracker</Text>
-          <Text style={styles.subtitle}>
+          <Text variant="headlineLarge" style={styles.title}>
+            Pod Tracker
+          </Text>
+          <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
             {mode === 'forgot'
               ? "Enter your email and we'll send you a reset link."
               : 'Log your Magic games with the crew.'}
@@ -101,8 +103,16 @@ export default function SignInScreen() {
             />
           )}
 
-          {error ? <Text style={styles.error}>{error}</Text> : null}
-          {notice ? <Text style={styles.notice}>{notice}</Text> : null}
+          {error ? (
+            <Text variant="bodySmall" style={{ color: theme.colors.error }}>
+              {error}
+            </Text>
+          ) : null}
+          {notice ? (
+            <Text variant="bodySmall" style={{ color: colors.success }}>
+              {notice}
+            </Text>
+          ) : null}
 
           <Button
             label={
@@ -118,32 +128,30 @@ export default function SignInScreen() {
           />
 
           {mode === 'signin' && (
-            <Pressable
+            <PaperButton
+              mode="text"
               onPress={() => {
                 setError(null);
                 setNotice(null);
                 setMode('forgot');
               }}
-              style={styles.switch}
             >
-              <Text style={styles.switchText}>Forgot password?</Text>
-            </Pressable>
+              Forgot password?
+            </PaperButton>
           )}
 
-          <Pressable
+          <PaperButton
+            mode="text"
             onPress={() => {
               setMode((m) => (m === 'signup' ? 'signin' : 'signup'));
               setError(null);
               setNotice(null);
             }}
-            style={styles.switch}
           >
-            <Text style={styles.switchText}>
-              {mode === 'signup'
-                ? 'Already have an account? Sign in'
-                : "Don't have an account? Sign up"}
-            </Text>
-          </Pressable>
+            {mode === 'signup'
+              ? 'Already have an account? Sign in'
+              : "Don't have an account? Sign up"}
+          </PaperButton>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -154,11 +162,6 @@ const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.bg },
   container: { flexGrow: 1, paddingHorizontal: spacing.lg, gap: spacing.xxl },
   header: { gap: spacing.sm },
-  title: { color: colors.text, fontSize: fontSize.xxl, fontWeight: '800' },
-  subtitle: { color: colors.textMuted, fontSize: fontSize.md },
+  title: { fontWeight: '800' },
   form: { gap: spacing.lg },
-  error: { color: colors.danger, fontSize: fontSize.sm },
-  notice: { color: colors.success, fontSize: fontSize.sm },
-  switch: { alignItems: 'center', paddingVertical: spacing.sm },
-  switchText: { color: colors.primary, fontSize: fontSize.md, fontWeight: '600' },
 });

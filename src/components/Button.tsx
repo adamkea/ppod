@@ -1,13 +1,5 @@
-import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  Text,
-  type StyleProp,
-  type ViewStyle,
-} from 'react-native';
-
-import { colors, fontSize, radius, spacing } from '@/theme';
+import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
+import { Button as PaperButton, useTheme } from 'react-native-paper';
 
 type Variant = 'primary' | 'secondary' | 'danger' | 'ghost';
 
@@ -20,6 +12,13 @@ interface ButtonProps {
   style?: StyleProp<ViewStyle>;
 }
 
+const modeByVariant = {
+  primary: 'contained',
+  secondary: 'contained-tonal',
+  danger: 'outlined',
+  ghost: 'text',
+} as const;
+
 export function Button({
   label,
   onPress,
@@ -28,52 +27,24 @@ export function Button({
   disabled = false,
   style,
 }: ButtonProps) {
-  const isDisabled = disabled || loading;
+  const theme = useTheme();
   return (
-    <Pressable
+    <PaperButton
+      mode={modeByVariant[variant]}
       onPress={onPress}
-      disabled={isDisabled}
-      style={({ pressed }) => [
-        styles.base,
-        variantStyles[variant],
-        pressed && !isDisabled ? styles.pressed : null,
-        isDisabled ? styles.disabled : null,
-        style,
-      ]}
+      loading={loading}
+      disabled={disabled || loading}
+      textColor={variant === 'danger' ? theme.colors.error : undefined}
+      style={[variant === 'danger' && { borderColor: theme.colors.error }, style]}
+      contentStyle={styles.content}
+      labelStyle={styles.label}
     >
-      {loading ? (
-        <ActivityIndicator color={variant === 'primary' ? colors.primaryText : colors.text} />
-      ) : (
-        <Text style={[styles.label, labelStyles[variant]]}>{label}</Text>
-      )}
-    </Pressable>
+      {label}
+    </PaperButton>
   );
 }
 
 const styles = StyleSheet.create({
-  base: {
-    minHeight: 48,
-    borderRadius: radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.lg,
-    flexDirection: 'row',
-  },
-  pressed: { opacity: 0.8 },
-  disabled: { opacity: 0.5 },
-  label: { fontSize: fontSize.md, fontWeight: '600' },
+  content: { minHeight: 48 },
+  label: { fontSize: 15, fontWeight: '600' },
 });
-
-const variantStyles: Record<Variant, ViewStyle> = {
-  primary: { backgroundColor: colors.primary },
-  secondary: { backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.border },
-  danger: { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.danger },
-  ghost: { backgroundColor: 'transparent' },
-};
-
-const labelStyles: Record<Variant, { color: string }> = {
-  primary: { color: colors.primaryText },
-  secondary: { color: colors.text },
-  danger: { color: colors.danger },
-  ghost: { color: colors.primary },
-};

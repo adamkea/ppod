@@ -2,12 +2,13 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { View } from 'react-native';
+import { PaperProvider } from 'react-native-paper';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { Loading } from '@/components/ui';
 import { useAuth } from '@/providers/AuthProvider';
 import { Providers } from '@/providers/Providers';
-import { colors } from '@/theme';
+import { colors, paperTheme } from '@/theme';
 
 export const unstable_settings = {
   initialRouteName: 'index',
@@ -73,10 +74,12 @@ function RootNavigator() {
 export default function RootLayout() {
   return (
     <SafeAreaProvider>
-      <Providers>
-        <StatusBar style="light" />
-        <RootNavigator />
-      </Providers>
+      <PaperProvider theme={paperTheme}>
+        <Providers>
+          <StatusBar style="light" />
+          <RootNavigator />
+        </Providers>
+      </PaperProvider>
     </SafeAreaProvider>
   );
 }

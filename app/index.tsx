@@ -1,13 +1,14 @@
 import { Stack, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, StyleSheet, View } from 'react-native';
+import { Button as PaperButton, Text, useTheme } from 'react-native-paper';
 
 import { Button } from '@/components/Button';
 import { PromptModal } from '@/components/PromptModal';
 import { Card, EmptyState, ErrorState, Loading } from '@/components/ui';
 import { useCreatePod, useJoinPod, usePods } from '@/hooks/usePods';
 import { useAuth } from '@/providers/AuthProvider';
-import { colors, fontSize, spacing } from '@/theme';
+import { colors, spacing } from '@/theme';
 import type { Pod } from '@/types/database';
 
 type Dialog = 'none' | 'create' | 'join';
@@ -66,9 +67,9 @@ export default function PodsScreen() {
       <Stack.Screen
         options={{
           headerRight: () => (
-            <Pressable onPress={() => signOut()} hitSlop={8}>
-              <Text style={styles.signOut}>Sign out</Text>
-            </Pressable>
+            <PaperButton mode="text" compact onPress={() => signOut()}>
+              Sign out
+            </PaperButton>
           ),
         }}
       />
@@ -138,15 +139,14 @@ export default function PodsScreen() {
 }
 
 function PodRow({ pod, onPress }: { pod: Pod; onPress: () => void }) {
+  const theme = useTheme();
   return (
-    <Pressable onPress={onPress}>
-      {({ pressed }) => (
-        <Card style={[styles.podCard, pressed && styles.pressed]}>
-          <Text style={styles.podName}>{pod.name}</Text>
-          <Text style={styles.podCode}>Invite code · {pod.invite_code}</Text>
-        </Card>
-      )}
-    </Pressable>
+    <Card onPress={onPress} style={styles.podCard}>
+      <Text variant="titleMedium">{pod.name}</Text>
+      <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+        Invite code · {pod.invite_code}
+      </Text>
+    </Card>
   );
 }
 
@@ -154,9 +154,6 @@ const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.bg },
   list: { padding: spacing.lg, gap: spacing.md, flexGrow: 1 },
   podCard: { gap: spacing.xs },
-  pressed: { opacity: 0.7 },
-  podName: { color: colors.text, fontSize: fontSize.lg, fontWeight: '700' },
-  podCode: { color: colors.textMuted, fontSize: fontSize.sm },
   footer: {
     flexDirection: 'row',
     gap: spacing.md,
@@ -166,5 +163,4 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bg,
   },
   footerBtn: { flex: 1 },
-  signOut: { color: colors.primary, fontSize: fontSize.md, fontWeight: '600' },
 });

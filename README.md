@@ -11,6 +11,8 @@ games grouped by date, and a wins-per-player leaderboard.
 ## Stack
 
 - **Expo** (managed) with **expo-router** for navigation
+- **React Native Paper** (Material Design 3) for the component library and
+  theming — see `src/theme.ts` for the custom dark theme
 - **Supabase** — hosted Postgres with Auth, Row-Level Security, and the
   `supabase-js` client
 - **TanStack Query** for caching, loading, and mutation states

@@ -6,9 +6,9 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
+import { Button as PaperButton, Checkbox, Chip, Text, useTheme } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
@@ -26,7 +26,7 @@ import { todayISO } from '@/lib/dates';
 import { useAuth } from '@/providers/AuthProvider';
 import { commanderLabel } from '@/lib/stats';
 import type { ScryfallArt } from '@/lib/scryfall';
-import { colors, fontSize, radius, spacing } from '@/theme';
+import { colors, spacing } from '@/theme';
 import type { ParticipantInput, PlayerCommander } from '@/types/database';
 
 interface Entry {
@@ -65,6 +65,7 @@ export default function AddGameScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { session } = useAuth();
+  const theme = useTheme();
 
   const pod = usePod(podId);
   const players = usePlayers(podId);
@@ -251,7 +252,10 @@ export default function AddGameScreen() {
           </View>
         </View>
 
-        <Text style={styles.sectionTitle}>
+        <Text
+          variant="labelLarge"
+          style={[styles.sectionTitle, { color: theme.colors.onSurfaceVariant }]}
+        >
           Players · {selectedCount} playing
         </Text>
 
@@ -272,24 +276,25 @@ export default function AddGameScreen() {
                     }
                     hitSlop={6}
                   >
-                    <View style={[styles.checkbox, entry.selected && styles.checkboxOn]}>
-                      {entry.selected ? <Text style={styles.checkMark}>✓</Text> : null}
+                    <View pointerEvents="none">
+                      <Checkbox.Android status={entry.selected ? 'checked' : 'unchecked'} />
                     </View>
-                    <Text style={styles.playerName}>{player.name}</Text>
+                    <Text variant="titleSmall" style={styles.playerName}>
+                      {player.name}
+                    </Text>
                   </Pressable>
 
                   {entry.selected ? (
-                    <Pressable
+                    <Chip
+                      mode={entry.isWinner ? 'flat' : 'outlined'}
+                      icon="crown"
+                      selected={entry.isWinner}
                       onPress={() => update(player.id, { isWinner: !entry.isWinner })}
-                      hitSlop={6}
-                      style={[styles.winnerToggle, entry.isWinner && styles.winnerToggleOn]}
+                      selectedColor={entry.isWinner ? colors.winner : undefined}
+                      style={entry.isWinner ? styles.winnerChipOn : undefined}
                     >
-                      <Text
-                        style={[styles.winnerText, entry.isWinner && styles.winnerTextOn]}
-                      >
-                        {entry.isWinner ? '👑 Winner' : 'Mark winner'}
-                      </Text>
-                    </Pressable>
+                      {entry.isWinner ? 'Winner' : 'Mark winner'}
+                    </Chip>
                   ) : null}
                 </View>
 
@@ -348,12 +353,15 @@ export default function AddGameScreen() {
                         />
                       </>
                     ) : (
-                      <Pressable
+                      <PaperButton
+                        mode="text"
+                        compact
+                        icon="plus"
                         onPress={() => update(player.id, { showPartner: true })}
-                        hitSlop={6}
+                        style={styles.addPartner}
                       >
-                        <Text style={styles.addPartner}>＋ Add partner</Text>
-                      </Pressable>
+                        Add partner
+                      </PaperButton>
                     )}
                   </View>
                 ) : null}
@@ -372,7 +380,11 @@ export default function AddGameScreen() {
           style={styles.noteInput}
         />
 
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+        {error ? (
+          <Text variant="bodySmall" style={{ color: theme.colors.error }}>
+            {error}
+          </Text>
+        ) : null}
 
         {isEditing && isOwner ? (
           <Button label="Delete game" variant="danger" onPress={confirmDelete} />
@@ -415,19 +427,17 @@ function SavedCommanderChips({
         const label = commanderLabel(c.commander, c.partner_commander);
         const active = c.commander === activeCommander;
         return (
-          <Pressable
+          <Chip
             key={c.id}
-            style={[chipStyles.chip, active && chipStyles.chipActive]}
+            mode={active ? 'flat' : 'outlined'}
+            selected={active}
+            showSelectedCheck
+            compact
             onPress={() => onSelect(c)}
-            hitSlop={4}
+            style={chipStyles.chip}
           >
-            <Text
-              style={[chipStyles.chipText, active && chipStyles.chipTextActive]}
-              numberOfLines={1}
-            >
-              {label}
-            </Text>
-          </Pressable>
+            {label}
+          </Chip>
         );
       })}
     </View>
@@ -440,27 +450,7 @@ const chipStyles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: spacing.sm,
   },
-  chip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceAlt,
-    maxWidth: 200,
-  },
-  chipActive: {
-    borderColor: colors.primary,
-    backgroundColor: 'rgba(124,92,255,0.15)',
-  },
-  chipText: {
-    color: colors.textMuted,
-    fontSize: fontSize.sm,
-    fontWeight: '600',
-  },
-  chipTextActive: {
-    color: colors.primary,
-  },
+  chip: { maxWidth: 220 },
 });
 
 const styles = StyleSheet.create({
@@ -469,9 +459,6 @@ const styles = StyleSheet.create({
   metaRow: { flexDirection: 'row', gap: spacing.md },
   metaItem: { flex: 1, gap: spacing.xs },
   sectionTitle: {
-    color: colors.textMuted,
-    fontSize: fontSize.sm,
-    fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
@@ -483,37 +470,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing.md,
   },
-  checkRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, flexShrink: 1 },
-  checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: radius.sm,
-    borderWidth: 2,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkboxOn: { backgroundColor: colors.primary, borderColor: colors.primary },
-  checkMark: { color: colors.primaryText, fontWeight: '800', fontSize: 14 },
-  playerName: { color: colors.text, fontSize: fontSize.md, fontWeight: '600', flexShrink: 1 },
-  winnerToggle: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  winnerToggleOn: { backgroundColor: 'rgba(245,197,66,0.15)', borderColor: colors.winner },
-  winnerText: { color: colors.textMuted, fontSize: fontSize.sm, fontWeight: '600' },
-  winnerTextOn: { color: colors.winner },
+  checkRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexShrink: 1 },
+  playerName: { flexShrink: 1 },
+  winnerChipOn: { backgroundColor: 'rgba(245,197,66,0.15)' },
   commanderArea: { gap: spacing.sm },
-  addPartner: { color: colors.primary, fontSize: fontSize.sm, fontWeight: '600' },
+  addPartner: { alignSelf: 'flex-start' },
   noteInput: {
     minHeight: 80,
-    paddingTop: spacing.md,
-    textAlignVertical: 'top',
   },
-  error: { color: colors.danger, fontSize: fontSize.sm },
   footer: {
     padding: spacing.lg,
     borderTopWidth: 1,

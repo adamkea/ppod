@@ -1,6 +1,7 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Image, Pressable, SectionList, StyleSheet, Text, View } from 'react-native';
+import { Image, SectionList, StyleSheet, View } from 'react-native';
+import { Chip, Icon, IconButton, Text, useTheme } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
@@ -15,7 +16,7 @@ import { formatDateHeading } from '@/lib/dates';
 import { summarizeSeriesForFeed, type SeriesFeedSummary } from '@/lib/series';
 import { commanderLabel, groupFeedByDate } from '@/lib/stats';
 import { useAuth } from '@/providers/AuthProvider';
-import { colors, fontSize, radius, spacing } from '@/theme';
+import { colors, radius, spacing } from '@/theme';
 import type { GameWithPlayers } from '@/types/database';
 
 export default function PodDetailScreen() {
@@ -24,6 +25,7 @@ export default function PodDetailScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { session } = useAuth();
+  const theme = useTheme();
 
   const pod = usePod(podId);
   const games = useGames(podId);
@@ -75,16 +77,25 @@ export default function PodDetailScreen() {
           headerRight: () => (
             <View style={styles.headerButtons}>
               {isOwner && (
-                <Pressable onPress={() => setRenaming(true)} hitSlop={8}>
-                  <Text style={styles.headerLink}>Edit</Text>
-                </Pressable>
+                <IconButton
+                  icon="pencil-outline"
+                  size={22}
+                  onPress={() => setRenaming(true)}
+                  accessibilityLabel="Rename pod"
+                />
               )}
-              <Pressable onPress={() => router.push(`/pod/${podId}/series`)} hitSlop={8}>
-                <Text style={styles.headerLink}>Series</Text>
-              </Pressable>
-              <Pressable onPress={() => router.push(`/pod/${podId}/stats`)} hitSlop={8}>
-                <Text style={styles.headerLink}>Stats</Text>
-              </Pressable>
+              <IconButton
+                icon="trophy-outline"
+                size={22}
+                onPress={() => router.push(`/pod/${podId}/series`)}
+                accessibilityLabel="Series"
+              />
+              <IconButton
+                icon="chart-bar"
+                size={22}
+                onPress={() => router.push(`/pod/${podId}/stats`)}
+                accessibilityLabel="Stats"
+              />
             </View>
           ),
         }}
@@ -119,7 +130,12 @@ export default function PodDetailScreen() {
             />
           }
           renderSectionHeader={({ section }) => (
-            <Text style={styles.sectionHeader}>{section.title}</Text>
+            <Text
+              variant="labelLarge"
+              style={[styles.sectionHeader, { color: theme.colors.onSurfaceVariant }]}
+            >
+              {section.title}
+            </Text>
           )}
           renderItem={({ item }) =>
             item.kind === 'series' ? (
@@ -160,15 +176,15 @@ export default function PodDetailScreen() {
         {isOwner ? (
           <>
             <Button
-              label="＋ Log game"
+              label="Log game"
               onPress={() => router.push(`/pod/${podId}/add-game`)}
             />
-            <Text style={styles.ownerHint}>
+            <Text variant="bodySmall" style={[styles.ownerHint, { color: theme.colors.onSurfaceVariant }]}>
               You own this pod · share code {pod.data?.invite_code}
             </Text>
           </>
         ) : pod.data ? (
-          <Text style={styles.ownerHint}>
+          <Text variant="bodySmall" style={[styles.ownerHint, { color: theme.colors.onSurfaceVariant }]}>
             View only · only the pod owner can log or edit games
           </Text>
         ) : null}
@@ -184,12 +200,17 @@ function PodHeader({
   inviteCode?: string;
   onPlayers: () => void;
 }) {
+  const theme = useTheme();
   return (
     <View style={styles.podHeader}>
       <View style={styles.inviteRow}>
         <View>
-          <Text style={styles.inviteLabel}>Invite code</Text>
-          <Text style={styles.inviteCode}>{inviteCode ?? '—'}</Text>
+          <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+            Invite code
+          </Text>
+          <Text variant="headlineSmall" style={styles.inviteCode}>
+            {inviteCode ?? '—'}
+          </Text>
         </View>
         <Button label="Players" variant="secondary" onPress={onPlayers} />
       </View>
@@ -208,28 +229,37 @@ function CommanderCell({
   scryfallId: string | null;
   isWinner: boolean;
 }) {
+  const theme = useTheme();
   // Pinned art by print id when chosen, else the name's default printing.
   const artUri = useCommanderArt(commander, scryfallId).data ?? null;
 
-  const borderColor = isWinner ? colors.success : colors.danger;
+  const accent = isWinner ? colors.success : colors.danger;
 
   return (
-    <View style={[gridStyles.cell, { borderColor }]}>
+    <View style={[gridStyles.cell, { borderColor: accent, backgroundColor: theme.colors.surfaceVariant }]}>
       {artUri ? (
         <Image source={{ uri: artUri }} style={gridStyles.art} resizeMode="cover" />
       ) : (
         <View style={gridStyles.artPlaceholder}>
-          <Text style={gridStyles.placeholderIcon}>🃏</Text>
+          <Icon source="cards-outline" size={28} />
         </View>
       )}
-      <View style={[gridStyles.nameBar, { backgroundColor: isWinner ? colors.success + '33' : colors.danger + '33' }]}>
-        {isWinner && <Text style={gridStyles.crownIcon}>👑</Text>}
-        <Text style={[gridStyles.playerName, { color: isWinner ? colors.success : colors.danger }]} numberOfLines={1}>
+      <View style={[gridStyles.nameBar, { backgroundColor: accent + '33' }]}>
+        {isWinner && <Icon source="crown" size={12} color={colors.winner} />}
+        <Text
+          variant="labelMedium"
+          style={[gridStyles.playerName, { color: accent }]}
+          numberOfLines={1}
+        >
           {name}
         </Text>
       </View>
       {commander ? (
-        <Text style={gridStyles.commanderText} numberOfLines={1}>
+        <Text
+          variant="bodySmall"
+          style={[gridStyles.commanderText, { color: theme.colors.onSurfaceVariant }]}
+          numberOfLines={1}
+        >
           {commander}
         </Text>
       ) : null}
@@ -246,6 +276,7 @@ function GameCard({
   canEdit: boolean;
   onPress: () => void;
 }) {
+  const theme = useTheme();
   const participants = [...game.game_players].sort((a, b) => {
     if (a.is_winner !== b.is_winner) return a.is_winner ? -1 : 1;
     return (a.players?.name ?? '').localeCompare(b.players?.name ?? '');
@@ -254,53 +285,63 @@ function GameCard({
   const useGrid = participants.length >= 2 && participants.length <= 4;
 
   return (
-    <Pressable onPress={onPress} disabled={!canEdit}>
-      {({ pressed }) => (
-        <Card style={[styles.gameCard, pressed && canEdit && styles.pressed]}>
-          <Text style={styles.gameType}>{game.game_type}</Text>
-          {useGrid ? (
-            <View style={gridStyles.grid}>
-              {participants.map((gp) => (
-                <CommanderCell
-                  key={gp.id}
-                  name={gp.players?.name ?? 'Unknown'}
-                  commander={gp.commander}
-                  scryfallId={gp.commander_scryfall_id}
-                  isWinner={gp.is_winner}
-                />
-              ))}
-            </View>
-          ) : (
-            <View style={styles.participants}>
-              {participants.map((gp) => {
-                const cmd = commanderLabel(gp.commander, gp.partner_commander);
-                return (
-                  <View key={gp.id} style={styles.participantRow}>
-                    <Text
-                      style={[styles.participantName, gp.is_winner && styles.winnerName]}
-                      numberOfLines={1}
-                    >
-                      {gp.is_winner ? '👑 ' : ''}
-                      {gp.players?.name ?? 'Unknown'}
-                    </Text>
-                    {cmd ? (
-                      <Text style={styles.commander} numberOfLines={1}>
-                        {cmd}
-                      </Text>
-                    ) : null}
-                  </View>
-                );
-              })}
-            </View>
-          )}
-          {game.note ? (
-            <Text style={styles.note} numberOfLines={3}>
-              {game.note}
-            </Text>
-          ) : null}
-        </Card>
+    <Card onPress={canEdit ? onPress : undefined} style={styles.gameCard}>
+      <Text
+        variant="labelMedium"
+        style={[styles.gameType, { color: theme.colors.onSurfaceVariant }]}
+      >
+        {game.game_type}
+      </Text>
+      {useGrid ? (
+        <View style={gridStyles.grid}>
+          {participants.map((gp) => (
+            <CommanderCell
+              key={gp.id}
+              name={gp.players?.name ?? 'Unknown'}
+              commander={gp.commander}
+              scryfallId={gp.commander_scryfall_id}
+              isWinner={gp.is_winner}
+            />
+          ))}
+        </View>
+      ) : (
+        <View style={styles.participants}>
+          {participants.map((gp) => {
+            const cmd = commanderLabel(gp.commander, gp.partner_commander);
+            return (
+              <View key={gp.id} style={styles.participantRow}>
+                <Text
+                  variant="bodyMedium"
+                  style={[styles.participantName, gp.is_winner && styles.winnerName]}
+                  numberOfLines={1}
+                >
+                  {gp.is_winner ? '👑 ' : ''}
+                  {gp.players?.name ?? 'Unknown'}
+                </Text>
+                {cmd ? (
+                  <Text
+                    variant="bodySmall"
+                    style={[styles.commander, { color: theme.colors.onSurfaceVariant }]}
+                    numberOfLines={1}
+                  >
+                    {cmd}
+                  </Text>
+                ) : null}
+              </View>
+            );
+          })}
+        </View>
       )}
-    </Pressable>
+      {game.note ? (
+        <Text
+          variant="bodySmall"
+          style={[styles.note, { color: theme.colors.onSurfaceVariant }]}
+          numberOfLines={3}
+        >
+          {game.note}
+        </Text>
+      ) : null}
+    </Card>
   );
 }
 
@@ -313,75 +354,65 @@ function SeriesFeedCard({
   nameById: Map<string, string>;
   onPress: () => void;
 }) {
+  const theme = useTheme();
   const hasGames = series.gameCount > 0;
   const leaderName = series.leaderPlayerId
     ? nameById.get(series.leaderPlayerId) ?? 'Unknown'
     : null;
 
   return (
-    <Pressable onPress={onPress}>
-      {({ pressed }) => (
-        <Card style={[styles.gameCard, pressed && styles.pressed]}>
-          <View style={styles.seriesBadgeRow}>
-            <Text style={styles.seriesBadge}>SERIES</Text>
-            <Text style={styles.seriesTitle} numberOfLines={1}>
-              {series.name || 'Series'}
-            </Text>
-          </View>
-          <View style={styles.seriesMatchup}>
-            <Text style={styles.seriesMeta}>
-              {hasGames
-                ? `${series.gameCount} game${series.gameCount === 1 ? '' : 's'}`
-                : 'No games yet'}
-            </Text>
-            {leaderName ? (
-              <Text style={styles.seriesLeader} numberOfLines={1}>
-                👑 {leaderName} ({series.leaderWins})
-              </Text>
-            ) : null}
-          </View>
-        </Card>
-      )}
-    </Pressable>
+    <Card onPress={onPress} style={styles.gameCard}>
+      <View style={styles.seriesBadgeRow}>
+        <Chip compact mode="outlined" textStyle={styles.seriesBadgeText} style={styles.seriesBadge}>
+          SERIES
+        </Chip>
+        <Text variant="titleSmall" style={styles.seriesTitle} numberOfLines={1}>
+          {series.name || 'Series'}
+        </Text>
+      </View>
+      <View style={styles.seriesMatchup}>
+        <Text
+          variant="bodySmall"
+          style={[styles.seriesMeta, { color: theme.colors.onSurfaceVariant }]}
+        >
+          {hasGames
+            ? `${series.gameCount} game${series.gameCount === 1 ? '' : 's'}`
+            : 'No games yet'}
+        </Text>
+        {leaderName ? (
+          <Text variant="labelMedium" style={styles.seriesLeader} numberOfLines={1}>
+            👑 {leaderName} ({series.leaderWins})
+          </Text>
+        ) : null}
+      </View>
+    </Card>
   );
 }
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.bg },
   list: { padding: spacing.lg, gap: spacing.md, flexGrow: 1 },
-  headerButtons: { flexDirection: 'row', gap: spacing.md },
-  headerLink: { color: colors.primary, fontSize: fontSize.md, fontWeight: '600' },
+  headerButtons: { flexDirection: 'row' },
   podHeader: { marginBottom: spacing.sm },
   inviteRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  inviteLabel: { color: colors.textMuted, fontSize: fontSize.sm },
   inviteCode: {
-    color: colors.text,
-    fontSize: fontSize.xl,
     fontWeight: '800',
     letterSpacing: 2,
   },
   sectionHeader: {
-    color: colors.textMuted,
-    fontSize: fontSize.sm,
-    fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginTop: spacing.sm,
   },
   gameCard: { gap: spacing.sm },
-  pressed: { opacity: 0.7 },
   gameType: {
-    color: colors.textMuted,
-    fontSize: fontSize.sm,
     textTransform: 'capitalize',
   },
   note: {
-    color: colors.textMuted,
-    fontSize: fontSize.sm,
     fontStyle: 'italic',
     marginTop: spacing.xs,
   },
@@ -392,33 +423,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
   },
-  participantName: { color: colors.text, fontSize: fontSize.md, flexShrink: 1 },
+  participantName: { flexShrink: 1 },
   winnerName: { color: colors.winner, fontWeight: '700' },
   seriesBadgeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  seriesBadge: {
-    color: colors.primary,
+  seriesBadge: { backgroundColor: 'transparent' },
+  seriesBadgeText: {
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 0.5,
-    borderWidth: 1,
-    borderColor: colors.primary,
-    borderRadius: radius.sm,
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    overflow: 'hidden',
+    marginVertical: 2,
   },
-  seriesTitle: { color: colors.text, fontSize: fontSize.md, fontWeight: '700', flexShrink: 1 },
+  seriesTitle: { flexShrink: 1 },
   seriesMatchup: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: spacing.sm,
   },
-  seriesMeta: { color: colors.textMuted, fontSize: fontSize.sm, flexShrink: 1 },
-  seriesLeader: { color: colors.winner, fontSize: fontSize.sm, fontWeight: '700' },
+  seriesMeta: { flexShrink: 1 },
+  seriesLeader: { color: colors.winner },
   commander: {
-    color: colors.textMuted,
-    fontSize: fontSize.sm,
     flexShrink: 1,
     textAlign: 'right',
   },
@@ -430,8 +454,6 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   ownerHint: {
-    color: colors.textMuted,
-    fontSize: fontSize.sm,
     textAlign: 'center',
   },
 });
@@ -447,7 +469,6 @@ const gridStyles = StyleSheet.create({
     borderRadius: radius.sm,
     borderWidth: 2,
     overflow: 'hidden',
-    backgroundColor: colors.surfaceAlt,
   },
   art: {
     width: '100%',
@@ -458,9 +479,7 @@ const gridStyles = StyleSheet.create({
     height: 110,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.surfaceAlt,
   },
-  placeholderIcon: { fontSize: 28 },
   nameBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -468,14 +487,11 @@ const gridStyles = StyleSheet.create({
     paddingTop: spacing.xs,
     gap: 3,
   },
-  crownIcon: { fontSize: 11 },
   playerName: {
-    fontSize: fontSize.sm,
     fontWeight: '700',
     flexShrink: 1,
   },
   commanderText: {
-    color: colors.textMuted,
     fontSize: 11,
     paddingHorizontal: spacing.xs,
     paddingBottom: spacing.xs,
