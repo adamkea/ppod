@@ -1,18 +1,18 @@
+import { Image, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import {
   ActivityIndicator,
-  Image,
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
+  Icon,
+  IconButton,
+  Surface,
   Text,
-  View,
-} from 'react-native';
+  TouchableRipple,
+  useTheme,
+} from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useArtworks, useCommanderArt } from '@/hooks/useCardArt';
 import type { ScryfallArt } from '@/lib/scryfall';
-import { colors, fontSize, radius, spacing } from '@/theme';
+import { radius, spacing } from '@/theme';
 
 interface Props {
   /** The commander name to list artworks for; null keeps the picker closed. */
@@ -26,29 +26,38 @@ interface Props {
 // A gallery of every distinct artwork for a commander. Tapping one pins it.
 export function CommanderArtPicker({ commanderName, selectedId, onSelect, onClose }: Props) {
   const insets = useSafeAreaInsets();
+  const theme = useTheme();
   const visible = !!commanderName;
   const arts = useArtworks(commanderName ?? '', visible);
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={styles.backdrop}>
-        <View style={[styles.sheet, { paddingBottom: insets.bottom + spacing.lg }]}>
+      <View style={[styles.backdrop, { backgroundColor: theme.colors.backdrop }]}>
+        <Surface
+          mode="flat"
+          elevation={3}
+          style={[styles.sheet, { paddingBottom: insets.bottom + spacing.lg }]}
+        >
           <View style={styles.header}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.title}>Choose art</Text>
-              <Text style={styles.subtitle} numberOfLines={1}>
+              <Text variant="titleLarge">Choose art</Text>
+              <Text
+                variant="bodySmall"
+                style={{ color: theme.colors.onSurfaceVariant }}
+                numberOfLines={1}
+              >
                 {commanderName}
               </Text>
             </View>
-            <Pressable onPress={onClose} hitSlop={8} style={styles.doneBtn}>
-              <Text style={styles.doneBtnText}>Done</Text>
-            </Pressable>
+            <IconButton icon="close" onPress={onClose} />
           </View>
 
           {arts.isLoading ? (
-            <ActivityIndicator color={colors.primary} style={{ marginVertical: spacing.xl }} />
+            <ActivityIndicator style={{ marginVertical: spacing.xl }} />
           ) : !arts.data || arts.data.length === 0 ? (
-            <Text style={styles.empty}>No artwork found for this commander.</Text>
+            <Text variant="bodyMedium" style={[styles.empty, { color: theme.colors.onSurfaceVariant }]}>
+              No artwork found for this commander.
+            </Text>
           ) : (
             <ScrollView contentContainerStyle={styles.grid} keyboardShouldPersistTaps="handled">
               {arts.data.map((art) => {
@@ -56,29 +65,41 @@ export function CommanderArtPicker({ commanderName, selectedId, onSelect, onClos
                 return (
                   <Pressable
                     key={art.id}
-                    style={[styles.item, active && styles.itemActive]}
+                    style={[
+                      styles.item,
+                      { borderColor: active ? theme.colors.primary : theme.colors.outlineVariant },
+                      { backgroundColor: theme.colors.surfaceVariant },
+                    ]}
                     onPress={() => onSelect(art)}
                   >
                     {art.artCrop ? (
                       <Image source={{ uri: art.artCrop }} style={styles.art} resizeMode="cover" />
                     ) : (
                       <View style={[styles.art, styles.placeholder]}>
-                        <Text style={styles.placeholderIcon}>🃏</Text>
+                        <Icon source="cards-outline" size={28} />
                       </View>
                     )}
-                    <Text style={styles.set} numberOfLines={1}>
+                    <Text variant="labelMedium" style={styles.set} numberOfLines={1}>
                       {art.setName}
                     </Text>
-                    <Text style={styles.artist} numberOfLines={1}>
+                    <Text
+                      variant="bodySmall"
+                      style={[styles.artist, { color: theme.colors.onSurfaceVariant }]}
+                      numberOfLines={1}
+                    >
                       {art.artist}
                     </Text>
-                    {active && <Text style={styles.check}>✓</Text>}
+                    {active && (
+                      <View style={styles.check}>
+                        <Icon source="check-circle" size={22} color={theme.colors.primary} />
+                      </View>
+                    )}
                   </Pressable>
                 );
               })}
             </ScrollView>
           )}
-        </View>
+        </Surface>
       </View>
     </Modal>
   );
@@ -96,35 +117,47 @@ export function ArtChooserRow({
   scryfallId: string | null;
   onPress: () => void;
 }) {
+  const theme = useTheme();
   const art = useCommanderArt(name, scryfallId);
   if (!name.trim()) return null;
   return (
-    <Pressable style={chooserStyles.row} onPress={onPress} hitSlop={6}>
-      {art.data ? (
-        <Image source={{ uri: art.data }} style={chooserStyles.thumb} resizeMode="cover" />
-      ) : (
-        <View style={[chooserStyles.thumb, chooserStyles.thumbPlaceholder]}>
-          <Text style={chooserStyles.thumbIcon}>🃏</Text>
-        </View>
-      )}
-      <Text style={chooserStyles.label}>{scryfallId ? 'Custom art ✓' : 'Choose art (optional)'}</Text>
-      <Text style={chooserStyles.chevron}>›</Text>
-    </Pressable>
+    <TouchableRipple onPress={onPress} style={chooserStyles.row}>
+      <View style={chooserStyles.rowInner}>
+        {art.data ? (
+          <Image source={{ uri: art.data }} style={chooserStyles.thumb} resizeMode="cover" />
+        ) : (
+          <View
+            style={[
+              chooserStyles.thumb,
+              chooserStyles.thumbPlaceholder,
+              { backgroundColor: theme.colors.surfaceVariant },
+            ]}
+          >
+            <Icon source="cards-outline" size={16} />
+          </View>
+        )}
+        <Text variant="labelLarge" style={[chooserStyles.label, { color: theme.colors.primary }]}>
+          {scryfallId ? 'Custom art ✓' : 'Choose art (optional)'}
+        </Text>
+        <Icon source="chevron-right" size={20} color={theme.colors.onSurfaceVariant} />
+      </View>
+    </TouchableRipple>
   );
 }
 
 const chooserStyles = StyleSheet.create({
   row: {
+    borderRadius: radius.sm,
+  },
+  rowInner: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
     paddingVertical: spacing.xs,
   },
-  thumb: { width: 40, height: 30, borderRadius: radius.sm, backgroundColor: colors.surfaceAlt },
+  thumb: { width: 40, height: 30, borderRadius: radius.sm },
   thumbPlaceholder: { alignItems: 'center', justifyContent: 'center' },
-  thumbIcon: { fontSize: 16 },
-  label: { flex: 1, color: colors.primary, fontSize: fontSize.sm, fontWeight: '600' },
-  chevron: { color: colors.textMuted, fontSize: fontSize.lg },
+  label: { flex: 1 },
 });
 
 const ITEM_WIDTH = 150;
@@ -132,11 +165,9 @@ const ITEM_WIDTH = 150;
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
     justifyContent: 'flex-end',
   },
   sheet: {
-    backgroundColor: colors.bg,
     borderTopLeftRadius: radius.lg,
     borderTopRightRadius: radius.lg,
     paddingHorizontal: spacing.lg,
@@ -148,11 +179,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.md,
   },
-  title: { color: colors.text, fontSize: fontSize.lg, fontWeight: '700' },
-  subtitle: { color: colors.textMuted, fontSize: fontSize.sm },
-  doneBtn: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
-  doneBtnText: { color: colors.primary, fontSize: fontSize.md, fontWeight: '700' },
-  empty: { color: colors.textMuted, fontSize: fontSize.sm, marginVertical: spacing.xl },
+  empty: { marginVertical: spacing.xl },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -164,29 +191,20 @@ const styles = StyleSheet.create({
     width: ITEM_WIDTH,
     borderRadius: radius.md,
     borderWidth: 2,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceAlt,
     overflow: 'hidden',
     padding: spacing.xs,
   },
-  itemActive: { borderColor: colors.primary },
   art: {
     width: '100%',
     height: 100,
     borderRadius: radius.sm,
   },
-  placeholder: { alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface },
-  placeholderIcon: { fontSize: 28 },
+  placeholder: { alignItems: 'center', justifyContent: 'center' },
   set: {
-    color: colors.text,
-    fontSize: fontSize.sm,
-    fontWeight: '600',
     marginTop: spacing.xs,
     paddingHorizontal: spacing.xs,
   },
   artist: {
-    color: colors.textMuted,
-    fontSize: 12,
     paddingHorizontal: spacing.xs,
     paddingBottom: spacing.xs,
   },
@@ -194,10 +212,5 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: spacing.sm,
     right: spacing.sm,
-    color: colors.primary,
-    fontSize: fontSize.lg,
-    fontWeight: '900',
-    textShadowColor: '#000',
-    textShadowRadius: 4,
   },
 });

@@ -3,12 +3,11 @@ import { useMemo, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
+import { Chip, Text, useTheme } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
@@ -18,7 +17,7 @@ import { usePlayers } from '@/hooks/usePlayers';
 import { usePod } from '@/hooks/usePods';
 import { useCreateSeries } from '@/hooks/useSeries';
 import { useAuth } from '@/providers/AuthProvider';
-import { colors, fontSize, radius, spacing } from '@/theme';
+import { colors, spacing } from '@/theme';
 
 export default function NewSeriesScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -26,6 +25,7 @@ export default function NewSeriesScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { session } = useAuth();
+  const theme = useTheme();
 
   const pod = usePod(podId);
   const players = usePlayers(podId);
@@ -124,29 +124,26 @@ export default function NewSeriesScreen() {
         />
 
         <View style={styles.pickerWrap}>
-          <Text style={styles.pickerLabel}>
+          <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant }}>
             Players · {selectedIds.length} in series
           </Text>
-          <Text style={styles.hint}>
+          <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
             Everyone in the draft. Each game is 1 v 1 between two of them.
           </Text>
           <View style={styles.chipRow}>
             {orderedPlayers.map((p) => {
               const active = !!selected[p.id];
               return (
-                <Pressable
+                <Chip
                   key={p.id}
+                  mode={active ? 'flat' : 'outlined'}
+                  selected={active}
+                  showSelectedCheck
                   onPress={() => toggle(p.id)}
-                  style={[styles.chip, active && styles.chipActive]}
-                  hitSlop={4}
+                  style={styles.chip}
                 >
-                  <Text
-                    style={[styles.chipText, active && styles.chipTextActive]}
-                    numberOfLines={1}
-                  >
-                    {active ? '✓ ' : ''}{p.name}
-                  </Text>
-                </Pressable>
+                  {p.name}
+                </Chip>
               );
             })}
           </View>
@@ -159,11 +156,15 @@ export default function NewSeriesScreen() {
           placeholder="e.g. 10"
           keyboardType="number-pad"
         />
-        <Text style={styles.hint}>
+        <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
           A soft goal for tracking progress — the series stays open either way.
         </Text>
 
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+        {error ? (
+          <Text variant="bodySmall" style={{ color: theme.colors.error }}>
+            {error}
+          </Text>
+        ) : null}
       </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.md }]}>
@@ -181,29 +182,8 @@ const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.bg },
   content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxl },
   pickerWrap: { gap: spacing.sm },
-  pickerLabel: {
-    color: colors.textMuted,
-    fontSize: fontSize.sm,
-    fontWeight: '600',
-  },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  chip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceAlt,
-    maxWidth: 220,
-  },
-  chipActive: {
-    borderColor: colors.primary,
-    backgroundColor: 'rgba(124,92,255,0.15)',
-  },
-  chipText: { color: colors.textMuted, fontSize: fontSize.sm, fontWeight: '600' },
-  chipTextActive: { color: colors.primary },
-  hint: { color: colors.textMuted, fontSize: fontSize.sm },
-  error: { color: colors.danger, fontSize: fontSize.sm },
+  chip: { maxWidth: 220 },
   footer: {
     padding: spacing.lg,
     borderTopWidth: 1,

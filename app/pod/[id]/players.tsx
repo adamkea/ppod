@@ -1,6 +1,7 @@
 import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, View } from 'react-native';
+import { IconButton, Text, useTheme } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
@@ -16,7 +17,7 @@ import {
 import { usePod } from '@/hooks/usePods';
 import { confirmAsync } from '@/lib/confirm';
 import { useAuth } from '@/providers/AuthProvider';
-import { colors, fontSize, spacing } from '@/theme';
+import { colors, spacing } from '@/theme';
 import type { Player } from '@/types/database';
 
 export default function PlayersScreen() {
@@ -24,6 +25,7 @@ export default function PlayersScreen() {
   const podId = id!;
   const insets = useSafeAreaInsets();
   const { session } = useAuth();
+  const theme = useTheme();
 
   const pod = usePod(podId);
   const players = usePlayers(podId);
@@ -89,17 +91,28 @@ export default function PlayersScreen() {
           renderItem={({ item }) => (
             <Card style={styles.row}>
               <Pressable style={styles.rowMain} onPress={() => setProfilePlayer(item)}>
-                <Text style={styles.name}>{item.name}</Text>
-                {item.user_id ? <Text style={styles.linked}>linked account</Text> : null}
+                <Text variant="titleSmall">{item.name}</Text>
+                {item.user_id ? (
+                  <Text variant="bodySmall" style={{ color: colors.success }}>
+                    linked account
+                  </Text>
+                ) : null}
               </Pressable>
               {isOwner ? (
                 <View style={styles.rowActions}>
-                  <Pressable onPress={() => setRenaming(item)} hitSlop={8}>
-                    <Text style={styles.renameText}>Rename</Text>
-                  </Pressable>
-                  <Pressable onPress={() => confirmDelete(item)} hitSlop={8}>
-                    <Text style={styles.remove}>Remove</Text>
-                  </Pressable>
+                  <IconButton
+                    icon="pencil-outline"
+                    size={20}
+                    onPress={() => setRenaming(item)}
+                    accessibilityLabel={`Rename ${item.name}`}
+                  />
+                  <IconButton
+                    icon="delete-outline"
+                    size={20}
+                    iconColor={theme.colors.error}
+                    onPress={() => confirmDelete(item)}
+                    accessibilityLabel={`Remove ${item.name}`}
+                  />
                 </View>
               ) : null}
             </Card>
@@ -109,7 +122,7 @@ export default function PlayersScreen() {
 
       {isOwner ? (
         <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.md }]}>
-          <Button label="＋ Add player" onPress={() => setAdding(true)} />
+          <Button label="Add player" onPress={() => setAdding(true)} />
         </View>
       ) : null}
 
@@ -160,14 +173,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.sm,
   },
   rowMain: { flex: 1, gap: 2 },
-  rowActions: { flexDirection: 'row', gap: spacing.md, alignItems: 'center' },
-  name: { color: colors.text, fontSize: fontSize.md, fontWeight: '600' },
-  linked: { color: colors.success, fontSize: fontSize.sm },
-  renameText: { color: colors.primary, fontSize: fontSize.sm, fontWeight: '600' },
-  remove: { color: colors.danger, fontSize: fontSize.sm, fontWeight: '600' },
+  rowActions: { flexDirection: 'row', alignItems: 'center' },
   footer: {
     padding: spacing.lg,
     borderTopWidth: 1,

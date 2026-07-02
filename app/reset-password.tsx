@@ -4,19 +4,20 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
+import { Text, useTheme } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
 import { TextField } from '@/components/TextField';
 import { useAuth } from '@/providers/AuthProvider';
-import { colors, fontSize, spacing } from '@/theme';
+import { colors, spacing } from '@/theme';
 
 export default function ResetPasswordScreen() {
   const { updatePassword } = useAuth();
   const insets = useSafeAreaInsets();
+  const theme = useTheme();
 
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -51,8 +52,12 @@ export default function ResetPasswordScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.header}>
-          <Text style={styles.title}>Set New Password</Text>
-          <Text style={styles.subtitle}>Choose a new password for your account.</Text>
+          <Text variant="headlineLarge" style={styles.title}>
+            Set New Password
+          </Text>
+          <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
+            Choose a new password for your account.
+          </Text>
         </View>
 
         <View style={styles.form}>
@@ -76,9 +81,15 @@ export default function ResetPasswordScreen() {
           />
 
           {confirm.length > 0 && password !== confirm && (
-            <Text style={styles.error}>Passwords do not match.</Text>
+            <Text variant="bodySmall" style={{ color: theme.colors.error }}>
+              Passwords do not match.
+            </Text>
           )}
-          {error ? <Text style={styles.error}>{error}</Text> : null}
+          {error ? (
+            <Text variant="bodySmall" style={{ color: theme.colors.error }}>
+              {error}
+            </Text>
+          ) : null}
 
           <Button
             label="Update password"
@@ -96,8 +107,6 @@ const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.bg },
   container: { flexGrow: 1, paddingHorizontal: spacing.lg, gap: spacing.xxl },
   header: { gap: spacing.sm },
-  title: { color: colors.text, fontSize: fontSize.xxl, fontWeight: '800' },
-  subtitle: { color: colors.textMuted, fontSize: fontSize.md },
+  title: { fontWeight: '800' },
   form: { gap: spacing.lg },
-  error: { color: colors.danger, fontSize: fontSize.sm },
 });

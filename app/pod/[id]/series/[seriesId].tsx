@@ -1,6 +1,7 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, StyleSheet, View } from 'react-native';
+import { Chip, Divider, Text, useTheme } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
@@ -19,7 +20,7 @@ import { confirmAsync } from '@/lib/confirm';
 import { formatDateHeading, todayISO } from '@/lib/dates';
 import { computeStandings } from '@/lib/series';
 import { useAuth } from '@/providers/AuthProvider';
-import { colors, fontSize, radius, spacing } from '@/theme';
+import { colors, spacing } from '@/theme';
 import type { SeriesGame } from '@/types/database';
 
 export default function SeriesDetailScreen() {
@@ -28,6 +29,7 @@ export default function SeriesDetailScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { session } = useAuth();
+  const theme = useTheme();
 
   const pod = usePod(podId);
   const players = usePlayers(podId);
@@ -130,6 +132,7 @@ export default function SeriesDetailScreen() {
   }
 
   const bothPicked = !!oneId && !!twoId;
+  const mutedColor = { color: theme.colors.onSurfaceVariant };
 
   return (
     <View style={styles.flex}>
@@ -145,27 +148,40 @@ export default function SeriesDetailScreen() {
           <View style={styles.headerArea}>
             {/* Standings */}
             <Card style={styles.card}>
-              <Text style={styles.cardTitle}>Standings</Text>
+              <Text variant="labelLarge" style={[styles.cardTitle, mutedColor]}>
+                Standings
+              </Text>
               <View style={styles.standingsHead}>
-                <Text style={[styles.colName, styles.headText]}>Player</Text>
-                <Text style={[styles.colNum, styles.headText]}>W</Text>
-                <Text style={[styles.colNum, styles.headText]}>L</Text>
-                <Text style={[styles.colNum, styles.headText]}>D</Text>
-                <Text style={[styles.colNum, styles.headText]}>GP</Text>
+                <Text variant="labelMedium" style={[styles.colName, mutedColor]}>
+                  Player
+                </Text>
+                <Text variant="labelMedium" style={[styles.colNum, mutedColor]}>W</Text>
+                <Text variant="labelMedium" style={[styles.colNum, mutedColor]}>L</Text>
+                <Text variant="labelMedium" style={[styles.colNum, mutedColor]}>D</Text>
+                <Text variant="labelMedium" style={[styles.colNum, mutedColor]}>GP</Text>
               </View>
+              <Divider />
               {standings.map((st, i) => (
                 <View key={st.playerId} style={styles.standingsRow}>
-                  <Text style={styles.colName} numberOfLines={1}>
+                  <Text variant="bodyMedium" style={styles.colName} numberOfLines={1}>
                     {i === 0 && st.wins > 0 ? '👑 ' : ''}
                     {nameOf(st.playerId)}
                   </Text>
-                  <Text style={[styles.colNum, styles.winNum]}>{st.wins}</Text>
-                  <Text style={styles.colNum}>{st.losses}</Text>
-                  <Text style={styles.colNum}>{st.draws}</Text>
-                  <Text style={styles.colNum}>{st.played}</Text>
+                  <Text variant="bodyMedium" style={[styles.colNum, styles.winNum]}>
+                    {st.wins}
+                  </Text>
+                  <Text variant="bodyMedium" style={[styles.colNum, mutedColor]}>
+                    {st.losses}
+                  </Text>
+                  <Text variant="bodyMedium" style={[styles.colNum, mutedColor]}>
+                    {st.draws}
+                  </Text>
+                  <Text variant="bodyMedium" style={[styles.colNum, mutedColor]}>
+                    {st.played}
+                  </Text>
                 </View>
               ))}
-              <Text style={styles.meta}>
+              <Text variant="bodySmall" style={[styles.meta, mutedColor]}>
                 {allGames.length} game{allGames.length === 1 ? '' : 's'} played
                 {s.target_games ? ` of ${s.target_games}` : ''}
               </Text>
@@ -174,7 +190,9 @@ export default function SeriesDetailScreen() {
             {/* Log a game */}
             {isOwner ? (
               <Card style={styles.card}>
-                <Text style={styles.cardTitle}>Log a game</Text>
+                <Text variant="labelLarge" style={[styles.cardTitle, mutedColor]}>
+                  Log a game
+                </Text>
                 <PickerRow
                   label="Player one"
                   rosterIds={rosterIds}
@@ -193,7 +211,9 @@ export default function SeriesDetailScreen() {
                 />
                 {bothPicked ? (
                   <View style={styles.winnerArea}>
-                    <Text style={styles.winnerPrompt}>Who won?</Text>
+                    <Text variant="labelLarge" style={mutedColor}>
+                      Who won?
+                    </Text>
                     <View style={styles.winnerButtons}>
                       <Button
                         label={`${nameOf(oneId)} won`}
@@ -209,7 +229,7 @@ export default function SeriesDetailScreen() {
                     <Button label="Draw" variant="secondary" onPress={() => log(null)} />
                   </View>
                 ) : (
-                  <Text style={styles.hint}>
+                  <Text variant="bodySmall" style={mutedColor}>
                     Pick the two players in this 1 v 1 game.
                   </Text>
                 )}
@@ -217,7 +237,9 @@ export default function SeriesDetailScreen() {
             ) : null}
 
             {allGames.length > 0 ? (
-              <Text style={styles.sectionTitle}>Games</Text>
+              <Text variant="labelLarge" style={[styles.sectionTitle, mutedColor]}>
+                Games
+              </Text>
             ) : null}
           </View>
         }
@@ -238,34 +260,38 @@ export default function SeriesDetailScreen() {
           const oneWon = item.winner_player_id === item.player_one_id;
           const twoWon = item.winner_player_id === item.player_two_id;
           return (
-            <Pressable
+            <Card
               onPress={isOwner ? () => confirmDeleteGame(item) : undefined}
-              disabled={!isOwner}
+              style={styles.gameRow}
             >
-              {({ pressed }) => (
-                <Card style={[styles.gameRow, pressed && isOwner && styles.pressed]}>
-                  <Text style={styles.gameNumber}>#{gameNumber}</Text>
-                  <View style={styles.gameMain}>
-                    <Text style={styles.matchup} numberOfLines={1}>
-                      <Text style={oneWon && styles.winnerText}>
-                        {oneWon ? '👑 ' : ''}{nameOf(item.player_one_id)}
-                      </Text>
-                      <Text style={styles.vs}>  vs  </Text>
-                      <Text style={twoWon && styles.winnerText}>
-                        {twoWon ? '👑 ' : ''}{nameOf(item.player_two_id)}
-                      </Text>
-                    </Text>
-                    {isDraw ? <Text style={styles.drawText}>🤝 Draw</Text> : null}
-                    {item.note ? (
-                      <Text style={styles.gameNote} numberOfLines={2}>
-                        {item.note}
-                      </Text>
-                    ) : null}
-                  </View>
-                  <Text style={styles.gameDate}>{formatDateHeading(item.played_at)}</Text>
-                </Card>
-              )}
-            </Pressable>
+              <Text variant="labelMedium" style={[styles.gameNumber, mutedColor]}>
+                #{gameNumber}
+              </Text>
+              <View style={styles.gameMain}>
+                <Text variant="bodyMedium" style={mutedColor} numberOfLines={1}>
+                  <Text variant="bodyMedium" style={oneWon ? styles.winnerText : mutedColor}>
+                    {oneWon ? '👑 ' : ''}{nameOf(item.player_one_id)}
+                  </Text>
+                  <Text variant="bodySmall" style={mutedColor}>  vs  </Text>
+                  <Text variant="bodyMedium" style={twoWon ? styles.winnerText : mutedColor}>
+                    {twoWon ? '👑 ' : ''}{nameOf(item.player_two_id)}
+                  </Text>
+                </Text>
+                {isDraw ? (
+                  <Text variant="bodySmall" style={mutedColor}>
+                    🤝 Draw
+                  </Text>
+                ) : null}
+                {item.note ? (
+                  <Text variant="bodySmall" style={[styles.gameNote, mutedColor]} numberOfLines={2}>
+                    {item.note}
+                  </Text>
+                ) : null}
+              </View>
+              <Text variant="bodySmall" style={mutedColor}>
+                {formatDateHeading(item.played_at)}
+              </Text>
+            </Card>
           );
         }}
         ListFooterComponent={
@@ -297,28 +323,28 @@ function PickerRow({
   disabledId: string | null;
   onSelect: (pid: string) => void;
 }) {
+  const theme = useTheme();
   return (
     <View style={styles.pickerRow}>
-      <Text style={styles.pickerLabel}>{label}</Text>
+      <Text variant="labelMedium" style={{ color: theme.colors.onSurfaceVariant }}>
+        {label}
+      </Text>
       <View style={styles.chipRow}>
         {rosterIds.map((pid) => {
           const active = pid === selectedId;
           const disabled = pid === disabledId;
           return (
-            <Pressable
+            <Chip
               key={pid}
+              mode={active ? 'flat' : 'outlined'}
+              selected={active}
+              showSelectedCheck
               disabled={disabled}
               onPress={() => onSelect(pid)}
-              style={[styles.chip, active && styles.chipActive, disabled && styles.chipDisabled]}
-              hitSlop={4}
+              style={styles.chip}
             >
-              <Text
-                style={[styles.chipText, active && styles.chipTextActive]}
-                numberOfLines={1}
-              >
-                {nameOf(pid)}
-              </Text>
-            </Pressable>
+              {nameOf(pid)}
+            </Chip>
           );
         })}
       </View>
@@ -332,9 +358,6 @@ const styles = StyleSheet.create({
   headerArea: { gap: spacing.lg, marginBottom: spacing.xs },
   card: { gap: spacing.sm },
   cardTitle: {
-    color: colors.textMuted,
-    fontSize: fontSize.sm,
-    fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
@@ -343,51 +366,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingBottom: spacing.xs,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
   },
   standingsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: spacing.xs,
   },
-  headText: { color: colors.textMuted, fontSize: fontSize.sm, fontWeight: '700' },
-  colName: { flex: 1, color: colors.text, fontSize: fontSize.md },
+  colName: { flex: 1 },
   colNum: {
     width: 34,
     textAlign: 'center',
-    color: colors.textMuted,
-    fontSize: fontSize.md,
     fontVariant: ['tabular-nums'],
   },
-  winNum: { color: colors.text, fontWeight: '700' },
-  meta: { color: colors.textMuted, fontSize: fontSize.sm, marginTop: spacing.xs },
+  winNum: { fontWeight: '700' },
+  meta: { marginTop: spacing.xs },
   // Log a game
   pickerRow: { gap: spacing.xs },
-  pickerLabel: { color: colors.textMuted, fontSize: fontSize.sm, fontWeight: '600' },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  chip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceAlt,
-    maxWidth: 200,
-  },
-  chipActive: { borderColor: colors.primary, backgroundColor: 'rgba(124,92,255,0.15)' },
-  chipDisabled: { opacity: 0.35 },
-  chipText: { color: colors.textMuted, fontSize: fontSize.sm, fontWeight: '600' },
-  chipTextActive: { color: colors.primary },
+  chip: { maxWidth: 200 },
   winnerArea: { gap: spacing.sm, marginTop: spacing.xs },
-  winnerPrompt: { color: colors.textMuted, fontSize: fontSize.sm, fontWeight: '600' },
   winnerButtons: { flexDirection: 'row', gap: spacing.md },
   winnerButton: { flex: 1 },
-  hint: { color: colors.textMuted, fontSize: fontSize.sm },
   sectionTitle: {
-    color: colors.textMuted,
-    fontSize: fontSize.sm,
-    fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
@@ -398,14 +398,9 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     paddingVertical: spacing.md,
   },
-  pressed: { opacity: 0.7 },
-  gameNumber: { color: colors.textMuted, fontSize: fontSize.sm, fontWeight: '700', width: 32 },
+  gameNumber: { width: 32 },
   gameMain: { flex: 1, gap: 2 },
-  matchup: { color: colors.textMuted, fontSize: fontSize.md },
   winnerText: { color: colors.winner, fontWeight: '700' },
-  vs: { color: colors.textMuted, fontSize: fontSize.sm },
-  drawText: { color: colors.textMuted, fontSize: fontSize.sm },
-  gameNote: { color: colors.textMuted, fontSize: fontSize.sm, fontStyle: 'italic' },
-  gameDate: { color: colors.textMuted, fontSize: fontSize.sm },
+  gameNote: { fontStyle: 'italic' },
   footerArea: { marginTop: spacing.lg },
 });

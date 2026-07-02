@@ -5,13 +5,13 @@ import {
   Platform,
   Pressable,
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
+import { HelperText, Surface, Text, useTheme } from 'react-native-paper';
 
 import { Button } from './Button';
 import { TextField } from './TextField';
-import { colors, fontSize, radius, spacing } from '@/theme';
+import { radius, spacing } from '@/theme';
 
 interface PromptModalProps {
   visible: boolean;
@@ -40,6 +40,7 @@ export function PromptModal({
   onSubmit,
   onClose,
 }: PromptModalProps) {
+  const theme = useTheme();
   const [value, setValue] = useState(initialValue);
 
   useEffect(() => {
@@ -48,31 +49,40 @@ export function PromptModal({
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose}>
+      <Pressable
+        style={[styles.backdrop, { backgroundColor: theme.colors.backdrop }]}
+        onPress={onClose}
+      >
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
-            <Text style={styles.title}>{title}</Text>
-            <TextField
-              label={label}
-              value={value}
-              onChangeText={setValue}
-              placeholder={placeholder}
-              autoCapitalize={autoCapitalize}
-              autoFocus
-              onSubmitEditing={() => value.trim() && onSubmit(value.trim())}
-              returnKeyType="done"
-            />
-            {error ? <Text style={styles.error}>{error}</Text> : null}
-            <View style={styles.actions}>
-              <Button label="Cancel" variant="secondary" onPress={onClose} style={styles.action} />
-              <Button
-                label={submitLabel}
-                onPress={() => onSubmit(value.trim())}
-                disabled={!value.trim()}
-                loading={submitting}
-                style={styles.action}
+          <Pressable onPress={(e) => e.stopPropagation()}>
+            <Surface mode="flat" elevation={3} style={styles.sheet}>
+              <Text variant="titleLarge">{title}</Text>
+              <TextField
+                label={label}
+                value={value}
+                onChangeText={setValue}
+                placeholder={placeholder}
+                autoCapitalize={autoCapitalize}
+                autoFocus
+                onSubmitEditing={() => value.trim() && onSubmit(value.trim())}
+                returnKeyType="done"
               />
-            </View>
+              {error ? (
+                <HelperText type="error" visible style={styles.error}>
+                  {error}
+                </HelperText>
+              ) : null}
+              <View style={styles.actions}>
+                <Button label="Cancel" variant="secondary" onPress={onClose} style={styles.action} />
+                <Button
+                  label={submitLabel}
+                  onPress={() => onSubmit(value.trim())}
+                  disabled={!value.trim()}
+                  loading={submitting}
+                  style={styles.action}
+                />
+              </View>
+            </Surface>
           </Pressable>
         </KeyboardAvoidingView>
       </Pressable>
@@ -83,20 +93,15 @@ export function PromptModal({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
     justifyContent: 'center',
     padding: spacing.lg,
   },
   sheet: {
-    backgroundColor: colors.surface,
     borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
     padding: spacing.lg,
     gap: spacing.md,
   },
-  title: { color: colors.text, fontSize: fontSize.lg, fontWeight: '700' },
-  error: { color: colors.danger, fontSize: fontSize.sm },
+  error: { paddingHorizontal: 0 },
   actions: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.xs },
   action: { flex: 1 },
 });

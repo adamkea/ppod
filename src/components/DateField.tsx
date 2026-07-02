@@ -2,10 +2,11 @@ import DateTimePicker, {
   type DateTimePickerEvent,
 } from '@react-native-community/datetimepicker';
 import { useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
+import { TextInput } from 'react-native-paper';
 
 import { formatDateHeading, fromISODate, toISODate } from '@/lib/dates';
-import { colors, fontSize, radius, spacing } from '@/theme';
+import { spacing } from '@/theme';
 
 export interface DateFieldProps {
   label?: string;
@@ -25,9 +26,16 @@ export function DateField({ label = 'Date', value, onChange, maximumDate }: Date
 
   return (
     <View style={styles.wrap}>
-      <Text style={styles.label}>{label}</Text>
-      <Pressable style={styles.button} onPress={() => setShow((v) => !v)}>
-        <Text style={styles.text}>{formatDateHeading(value)}</Text>
+      <Pressable onPress={() => setShow((v) => !v)}>
+        <View pointerEvents="none">
+          <TextInput
+            mode="outlined"
+            label={label}
+            value={formatDateHeading(value)}
+            editable={false}
+            right={<TextInput.Icon icon="calendar" />}
+          />
+        </View>
       </Pressable>
       {show ? (
         <DateTimePicker
@@ -45,15 +53,4 @@ export function DateField({ label = 'Date', value, onChange, maximumDate }: Date
 
 const styles = StyleSheet.create({
   wrap: { gap: spacing.xs },
-  label: { color: colors.textMuted, fontSize: fontSize.sm, fontWeight: '600' },
-  button: {
-    backgroundColor: colors.surfaceAlt,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    minHeight: 48,
-    justifyContent: 'center',
-    paddingHorizontal: spacing.md,
-  },
-  text: { color: colors.text, fontSize: fontSize.md },
 });
