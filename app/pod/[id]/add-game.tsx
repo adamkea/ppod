@@ -13,7 +13,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
 import { CommanderSearch } from '@/components/CommanderSearch';
-import { ArtChooserRow, CommanderArtPicker } from '@/components/CommanderArtPicker';
 import { DateField } from '@/components/DateField';
 import { TextField } from '@/components/TextField';
 import { Card, EmptyState, Loading } from '@/components/ui';
@@ -25,7 +24,6 @@ import { confirmAsync } from '@/lib/confirm';
 import { todayISO } from '@/lib/dates';
 import { useAuth } from '@/providers/AuthProvider';
 import { commanderLabel } from '@/lib/stats';
-import type { ScryfallArt } from '@/lib/scryfall';
 import { colors, spacing } from '@/theme';
 import type { ParticipantInput, PlayerCommander } from '@/types/database';
 
@@ -48,14 +46,6 @@ const emptyEntry: Entry = {
   isWinner: false,
   commanderArtId: null,
   partnerArtId: null,
-};
-
-// Which commander art the picker is currently editing.
-type ArtTarget = {
-  playerId: string;
-  side: 'main' | 'partner';
-  name: string;
-  currentId: string | null;
 };
 
 export default function AddGameScreen() {
@@ -82,7 +72,6 @@ export default function AddGameScreen() {
   const [note, setNote] = useState('');
   const [entries, setEntries] = useState<Record<string, Entry>>({});
   const [error, setError] = useState<string | null>(null);
-  const [artTarget, setArtTarget] = useState<ArtTarget | null>(null);
 
   // Seed form state once the data it depends on has loaded.
   const initialized = useRef(false);
@@ -128,15 +117,6 @@ export default function AddGameScreen() {
 
   function update(playerId: string, patch: Partial<Entry>) {
     setEntries((prev) => ({ ...prev, [playerId]: { ...prev[playerId], ...patch } }));
-  }
-
-  function handleArtSelected(art: ScryfallArt) {
-    if (!artTarget) return;
-    update(
-      artTarget.playerId,
-      artTarget.side === 'main' ? { commanderArtId: art.id } : { partnerArtId: art.id },
-    );
-    setArtTarget(null);
   }
 
   async function handleSave() {
@@ -316,38 +296,12 @@ export default function AddGameScreen() {
                         })
                       }
                     />
-                    <ArtChooserRow
-                      name={entry.commander}
-                      scryfallId={entry.commanderArtId}
-                      onPress={() =>
-                        setArtTarget({
-                          playerId: player.id,
-                          side: 'main',
-                          name: entry.commander.trim(),
-                          currentId: entry.commanderArtId,
-                        })
-                      }
-                    />
                     {entry.showPartner ? (
-                      <>
-                        <CommanderSearch
-                          value={entry.partner}
-                          onChange={(t) => update(player.id, { partner: t, partnerArtId: null })}
-                          placeholder="Partner commander"
-                        />
-                        <ArtChooserRow
-                          name={entry.partner}
-                          scryfallId={entry.partnerArtId}
-                          onPress={() =>
-                            setArtTarget({
-                              playerId: player.id,
-                              side: 'partner',
-                              name: entry.partner.trim(),
-                              currentId: entry.partnerArtId,
-                            })
-                          }
-                        />
-                      </>
+                      <CommanderSearch
+                        value={entry.partner}
+                        onChange={(t) => update(player.id, { partner: t, partnerArtId: null })}
+                        placeholder="Partner commander"
+                      />
                     ) : (
                       <PaperButton
                         mode="text"
@@ -395,12 +349,6 @@ export default function AddGameScreen() {
         />
       </View>
 
-      <CommanderArtPicker
-        commanderName={artTarget?.name ?? null}
-        selectedId={artTarget?.currentId}
-        onSelect={handleArtSelected}
-        onClose={() => setArtTarget(null)}
-      />
     </KeyboardAvoidingView>
   );
 }
