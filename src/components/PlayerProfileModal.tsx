@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Image,
   KeyboardAvoidingView,
@@ -27,6 +27,7 @@ import { CommanderSearch } from './CommanderSearch';
 import { CommanderArtPicker } from './CommanderArtPicker';
 import { radius, spacing } from '@/theme';
 import { useCommanderArt } from '@/hooks/useCardArt';
+import { useGames } from '@/hooks/useGames';
 import {
   useAddPlayerCommander,
   useDeletePlayerCommander,
@@ -34,6 +35,11 @@ import {
   usePlayerCommanders,
 } from '@/hooks/usePlayerCommanders';
 import type { ScryfallArt } from '@/lib/scryfall';
+import {
+  commanderRecordKey,
+  computeCommanderRecords,
+  type CommanderRecord,
+} from '@/lib/stats';
 import type { Player, PlayerCommander } from '@/types/database';
 
 // Which art the picker is currently editing: a side of the add-form, or a side
@@ -64,6 +70,13 @@ export function PlayerProfileModal({ player, readOnly = false, onClose }: Props)
   const addCommander = useAddPlayerCommander(playerId);
   const updateCommander = useUpdatePlayerCommander(playerId);
   const deleteCommander = useDeletePlayerCommander(playerId);
+
+  // The pod's games, to derive this player's win record per commander.
+  const games = useGames(player?.pod_id ?? '');
+  const commanderRecords = useMemo(
+    () => computeCommanderRecords(playerId, games.data ?? []),
+    [playerId, games.data],
+  );
 
   const [newCommander, setNewCommander] = useState('');
   const [newPartner, setNewPartner] = useState('');
@@ -170,6 +183,11 @@ export function PlayerProfileModal({ player, readOnly = false, onClose }: Props)
                 <CommanderRow
                   key={c.id}
                   item={c}
+                  record={
+                    commanderRecords.get(
+                      commanderRecordKey(c.commander, c.partner_commander),
+                    ) ?? null
+                  }
                   readOnly={readOnly}
                   onDelete={() => deleteCommander.mutate(c.id)}
                   deleting={deleteCommander.isPending}
@@ -332,12 +350,14 @@ const chooserStyles = StyleSheet.create({
 
 function CommanderRow({
   item,
+  record,
   readOnly,
   onDelete,
   deleting,
   onEditArt,
 }: {
   item: PlayerCommander;
+  record: CommanderRecord | null;
   readOnly: boolean;
   onDelete: () => void;
   deleting: boolean;
@@ -381,6 +401,11 @@ function CommanderRow({
             + {item.partner_commander}
           </Text>
         )}
+        <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+          {record
+            ? `${Math.round((record.wins / record.games_played) * 100)}% wins · ${record.wins}/${record.games_played} game${record.games_played === 1 ? '' : 's'}`
+            : 'No games played'}
+        </Text>
       </View>
 
       {/* Remove */}
