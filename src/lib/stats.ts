@@ -117,3 +117,51 @@ export function commanderLabel(
 ): string {
   return [commander, partner].filter(Boolean).join(' + ');
 }
+
+/** A player's win/loss record with one commander (or commander pair). */
+export interface CommanderRecord {
+  games_played: number;
+  wins: number;
+}
+
+/**
+ * Key identifying a commander/partner pairing, insensitive to case and to
+ * which of the pair was entered as "main" vs "partner".
+ */
+export function commanderRecordKey(
+  commander: string | null,
+  partner: string | null,
+): string {
+  return [commander, partner]
+    .map((n) => (n ?? '').trim().toLowerCase())
+    .filter(Boolean)
+    .sort()
+    .join('|');
+}
+
+/**
+ * Per-commander win records for one player, derived from the pod's games.
+ * Keyed by commanderRecordKey; participants with no commander recorded are
+ * skipped.
+ */
+export function computeCommanderRecords(
+  playerId: string,
+  games: GameWithPlayers[],
+): Map<string, CommanderRecord> {
+  const records = new Map<string, CommanderRecord>();
+  for (const game of games) {
+    for (const gp of game.game_players) {
+      if (gp.player_id !== playerId) continue;
+      const key = commanderRecordKey(gp.commander, gp.partner_commander);
+      if (!key) continue;
+      let record = records.get(key);
+      if (!record) {
+        record = { games_played: 0, wins: 0 };
+        records.set(key, record);
+      }
+      record.games_played += 1;
+      if (gp.is_winner) record.wins += 1;
+    }
+  }
+  return records;
+}
