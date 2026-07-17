@@ -1,40 +1,53 @@
 import { createElement } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Text, useTheme } from 'react-native-paper';
+import { TextInput } from 'react-native-paper';
 
-import { toISODate } from '@/lib/dates';
-import { radius, spacing } from '@/theme';
+import { formatDateHeading, toISODate } from '@/lib/dates';
 import type { DateFieldProps } from './DateField';
 
-// Web implementation: a real <input type="date"> gives a proper, accessible
-// browser date picker instead of relying on the native module's web shim.
-// Styled to sit alongside Paper's outlined text inputs.
+// Web implementation. The visible field is the same Paper outlined TextInput
+// the native version (and every other field on the form) uses, so it matches
+// them exactly. An invisible <input type="date"> stretched over it captures
+// taps and opens the browser's own date picker.
 export function DateField({ label = 'Date', value, onChange, maximumDate }: DateFieldProps) {
-  const theme = useTheme();
   return (
     <View style={styles.wrap}>
-      <Text variant="labelMedium" style={{ color: theme.colors.onSurfaceVariant }}>
-        {label}
-      </Text>
+      <View pointerEvents="none">
+        <TextInput
+          mode="outlined"
+          label={label}
+          value={formatDateHeading(value)}
+          editable={false}
+          right={<TextInput.Icon icon="calendar" />}
+        />
+      </View>
       {createElement('input', {
         type: 'date',
         value,
         max: maximumDate ? toISODate(maximumDate) : undefined,
+        'aria-label': label,
         onChange: (e: { target: { value: string } }) => {
           if (e.target.value) onChange(e.target.value);
         },
+        // Chrome needs an explicit nudge to open the picker on click; other
+        // browsers open it from the click on the input itself.
+        onClick: (e: { currentTarget: { showPicker?: () => void } }) => {
+          try {
+            e.currentTarget.showPicker?.();
+          } catch {
+            // Not allowed (e.g. no user gesture) — the input still works.
+          }
+        },
         style: {
-          backgroundColor: theme.colors.surfaceVariant,
-          color: theme.colors.onSurface,
-          border: `1px solid ${theme.colors.outline}`,
-          borderRadius: radius.md,
-          minHeight: 50,
-          padding: `0 ${spacing.md}px`,
-          fontSize: 15,
-          fontFamily: 'inherit',
-          colorScheme: 'dark',
+          position: 'absolute',
+          top: 0,
+          left: 0,
           width: '100%',
-          boxSizing: 'border-box',
+          height: '100%',
+          opacity: 0,
+          border: 'none',
+          padding: 0,
+          cursor: 'pointer',
         },
       })}
     </View>
@@ -42,5 +55,5 @@ export function DateField({ label = 'Date', value, onChange, maximumDate }: Date
 }
 
 const styles = StyleSheet.create({
-  wrap: { gap: spacing.xs },
+  wrap: { position: 'relative' },
 });
