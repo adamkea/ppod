@@ -300,10 +300,12 @@ export default function AddGameScreen() {
 
                 {entry.selected ? (
                   <View style={styles.commanderArea}>
-                    <SavedCommanderChips
+                    <PlayerCommanderField
                       playerId={player.id}
-                      activeCommander={entry.commander}
-                      onSelect={(c) =>
+                      value={entry.commander}
+                      // Editing the name invalidates any art pinned to the old name.
+                      onChange={(t) => update(player.id, { commander: t, commanderArtId: null })}
+                      onSelectSaved={(c) =>
                         update(player.id, {
                           commander: c.commander,
                           partner: c.partner_commander ?? '',
@@ -313,12 +315,6 @@ export default function AddGameScreen() {
                           partnerArtId: c.partner_scryfall_id,
                         })
                       }
-                    />
-                    <CommanderSearch
-                      value={entry.commander}
-                      // Editing the name invalidates any art pinned to the old name.
-                      onChange={(t) => update(player.id, { commander: t, commanderArtId: null })}
-                      placeholder="Commander (optional)"
                     />
                     <ArtChooserRow
                       name={entry.commander}
@@ -409,49 +405,38 @@ export default function AddGameScreen() {
   );
 }
 
-function SavedCommanderChips({
+// Commander input backed by the player's saved decks: they show up in the
+// field's dropdown before the user types, and typing searches Scryfall.
+function PlayerCommanderField({
   playerId,
-  activeCommander,
-  onSelect,
+  value,
+  onChange,
+  onSelectSaved,
 }: {
   playerId: string;
-  activeCommander: string;
-  onSelect: (c: PlayerCommander) => void;
+  value: string;
+  onChange: (text: string) => void;
+  onSelectSaved: (c: PlayerCommander) => void;
 }) {
   const { data } = usePlayerCommanders(playerId);
-  if (!data || data.length === 0) return null;
+  const saved = data ?? [];
 
   return (
-    <View style={chipStyles.row}>
-      {data.map((c) => {
-        const label = commanderLabel(c.commander, c.partner_commander);
-        const active = c.commander === activeCommander;
-        return (
-          <Chip
-            key={c.id}
-            mode={active ? 'flat' : 'outlined'}
-            selected={active}
-            showSelectedCheck
-            compact
-            onPress={() => onSelect(c)}
-            style={chipStyles.chip}
-          >
-            {label}
-          </Chip>
-        );
-      })}
-    </View>
+    <CommanderSearch
+      value={value}
+      onChange={onChange}
+      placeholder="Commander (optional)"
+      savedOptions={saved.map((c) => ({
+        id: c.id,
+        label: commanderLabel(c.commander, c.partner_commander),
+      }))}
+      onSelectSaved={(id) => {
+        const c = saved.find((s) => s.id === id);
+        if (c) onSelectSaved(c);
+      }}
+    />
   );
 }
-
-const chipStyles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  chip: { maxWidth: 220 },
-});
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.bg },

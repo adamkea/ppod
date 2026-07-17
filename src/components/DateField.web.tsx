@@ -1,21 +1,22 @@
-import { createElement } from 'react';
+import { createElement, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Text, useTheme } from 'react-native-paper';
 
 import { toISODate } from '@/lib/dates';
-import { radius, spacing } from '@/theme';
+import { spacing } from '@/theme';
 import type { DateFieldProps } from './DateField';
 
 // Web implementation: a real <input type="date"> gives a proper, accessible
 // browser date picker instead of relying on the native module's web shim.
-// Styled to sit alongside Paper's outlined text inputs.
+// Dressed up as a Paper outlined text input (floating label notched into the
+// border) so it matches the fields rendered next to it.
 export function DateField({ label = 'Date', value, onChange, maximumDate }: DateFieldProps) {
   const theme = useTheme();
+  const [focused, setFocused] = useState(false);
+  const borderWidth = focused ? 2 : 1;
+
   return (
     <View style={styles.wrap}>
-      <Text variant="labelMedium" style={{ color: theme.colors.onSurfaceVariant }}>
-        {label}
-      </Text>
       {createElement('input', {
         type: 'date',
         value,
@@ -23,24 +24,50 @@ export function DateField({ label = 'Date', value, onChange, maximumDate }: Date
         onChange: (e: { target: { value: string } }) => {
           if (e.target.value) onChange(e.target.value);
         },
+        onFocus: () => setFocused(true),
+        onBlur: () => setFocused(false),
         style: {
-          backgroundColor: theme.colors.surfaceVariant,
+          backgroundColor: 'transparent',
           color: theme.colors.onSurface,
-          border: `1px solid ${theme.colors.outline}`,
-          borderRadius: radius.md,
-          minHeight: 50,
-          padding: `0 ${spacing.md}px`,
-          fontSize: 15,
-          fontFamily: 'inherit',
+          border: `${borderWidth}px solid ${focused ? theme.colors.primary : theme.colors.outline}`,
+          borderRadius: theme.roundness,
+          height: 56,
+          // Compensate for the thicker focus border so the text doesn't shift.
+          padding: `0 ${spacing.lg - borderWidth}px`,
+          fontSize: 16,
+          fontFamily:
+            "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
           colorScheme: 'dark',
           width: '100%',
           boxSizing: 'border-box',
+          outline: 'none',
         },
       })}
+      <Text
+        variant="bodySmall"
+        style={[
+          styles.label,
+          {
+            color: focused ? theme.colors.primary : theme.colors.onSurfaceVariant,
+            backgroundColor: theme.colors.background,
+          },
+        ]}
+      >
+        {label}
+      </Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { gap: spacing.xs },
+  wrap: { position: 'relative' },
+  label: {
+    position: 'absolute',
+    top: -8,
+    left: spacing.md,
+    paddingHorizontal: spacing.xs,
+    fontSize: 12,
+    lineHeight: 16,
+    zIndex: 1,
+  },
 });
