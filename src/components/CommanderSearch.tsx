@@ -179,7 +179,9 @@ export function CommanderSearch({
                       style={styles.suggestion}
                       onPress={() => selectSaved(option.id)}
                     >
-                      <Text variant="bodyMedium">{option.label}</Text>
+                      <Text variant="bodyMedium" numberOfLines={1}>
+                        {option.label}
+                      </Text>
                     </TouchableRipple>
                     {index < savedOptions.length - 1 ? <Divider /> : null}
                   </View>
@@ -189,7 +191,9 @@ export function CommanderSearch({
               suggestions.map((item, index) => (
                 <View key={item}>
                   <TouchableRipple style={styles.suggestion} onPress={() => selectSuggestion(item)}>
-                    <Text variant="bodyMedium">{item}</Text>
+                    <Text variant="bodyMedium" numberOfLines={1}>
+                      {item}
+                    </Text>
                   </TouchableRipple>
                   {index < suggestions.length - 1 ? <Divider /> : null}
                 </View>
@@ -203,18 +207,14 @@ export function CommanderSearch({
 }
 
 const styles = StyleSheet.create({
-  container: { position: 'relative', zIndex: 10 },
+  container: { gap: spacing.xs },
+  // Rendered in normal flow (expanding the card) rather than as an overlay:
+  // the Card wrapper clips overflow, which would cut the list off.
   dropdown: {
-    position: 'absolute',
-    top: 52,
-    left: 0,
-    right: 0,
     borderRadius: radius.md,
     overflow: 'hidden',
-    zIndex: 100,
-    elevation: 8, // Android stacking
   },
-  dropdownScroll: { maxHeight: 220 },
+  dropdownScroll: { maxHeight: 308 },
   dropdownHeading: {
     paddingHorizontal: spacing.md,
     paddingTop: spacing.sm,

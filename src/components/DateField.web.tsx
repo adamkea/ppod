@@ -31,7 +31,11 @@ export function DateField({ label = 'Date', value, onChange, maximumDate }: Date
           color: theme.colors.onSurface,
           border: `${borderWidth}px solid ${focused ? theme.colors.primary : theme.colors.outline}`,
           borderRadius: theme.roundness,
-          height: 56,
+          // Paper's outlined inputs are 56px tall but inset the border box 6px
+          // from the top to leave room for the floating label; mirror that so
+          // this lines up with the field next to it.
+          marginTop: 6,
+          height: 50,
           // Compensate for the thicker focus border so the text doesn't shift.
           padding: `0 ${spacing.lg - borderWidth}px`,
           fontSize: 16,
@@ -63,7 +67,8 @@ const styles = StyleSheet.create({
   wrap: { position: 'relative' },
   label: {
     position: 'absolute',
-    top: -8,
+    // Centered on the border line, which sits 6px down (see marginTop above).
+    top: -2,
     left: spacing.md,
     paddingHorizontal: spacing.xs,
     fontSize: 12,
