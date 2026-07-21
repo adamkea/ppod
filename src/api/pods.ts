@@ -40,6 +40,18 @@ export async function renamePod(podId: string, name: string): Promise<void> {
   if (error) throw error;
 }
 
+export async function setPodCommentsEnabled(
+  podId: string,
+  enabled: boolean,
+): Promise<void> {
+  // Owner-only at the RLS layer.
+  const { error } = await supabase
+    .from('pods')
+    .update({ comments_enabled: enabled })
+    .eq('id', podId);
+  if (error) throw error;
+}
+
 export async function deletePod(podId: string): Promise<void> {
   // Owner-only at the RLS layer.
   const { error } = await supabase.from('pods').delete().eq('id', podId);

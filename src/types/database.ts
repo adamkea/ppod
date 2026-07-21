@@ -8,6 +8,8 @@ export interface Pod {
   name: string;
   owner_id: string;
   invite_code: string;
+  // Owner-controlled toggle: when true, members can comment on games.
+  comments_enabled: boolean;
   created_at: string;
 }
 
@@ -113,6 +115,17 @@ export interface SeriesGame {
 // in the pod's main game log alongside regular games.
 export interface SeriesGameWithSeries extends SeriesGame {
   series: Pick<Series, 'name'> | null;
+}
+
+// A member's comment on a game. `author_name` is captured at write time by
+// the add_game_comment RPC (linked player name, else email prefix).
+export interface GameComment {
+  id: string;
+  game_id: string;
+  user_id: string;
+  author_name: string;
+  body: string;
+  created_at: string;
 }
 
 // Derived per-player stats.

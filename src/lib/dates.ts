@@ -26,6 +26,17 @@ const MONTHS = [
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
 ];
 
+/** e.g. "May 25, 3:42 PM" (with the year when it isn't the current one). */
+export function formatTimestamp(iso: string): string {
+  const d = new Date(iso);
+  const hours = d.getHours();
+  const h12 = hours % 12 || 12;
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  const time = `${h12}:${minutes} ${hours < 12 ? 'AM' : 'PM'}`;
+  const year = d.getFullYear() === new Date().getFullYear() ? '' : ` ${d.getFullYear()}`;
+  return `${MONTHS[d.getMonth()]} ${d.getDate()}${year}, ${time}`;
+}
+
 /** "Today", "Yesterday", or e.g. "Mon, May 25 2026". */
 export function formatDateHeading(iso: string): string {
   const date = fromISODate(iso);

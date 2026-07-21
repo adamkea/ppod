@@ -1,12 +1,13 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Image, SectionList, StyleSheet, View } from 'react-native';
+import { Image, Pressable, SectionList, StyleSheet, View } from 'react-native';
 import { Chip, Icon, IconButton, Text, useTheme } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
 import { PromptModal } from '@/components/PromptModal';
 import { Card, EmptyState, ErrorState, Loading } from '@/components/ui';
+import { useCommentCounts } from '@/hooks/useComments';
 import { useGames } from '@/hooks/useGames';
 import { usePlayers } from '@/hooks/usePlayers';
 import { usePod, useRenamePod } from '@/hooks/usePods';
@@ -35,6 +36,8 @@ export default function PodDetailScreen() {
   const renamePod = useRenamePod();
 
   const isOwner = pod.data?.owner_id === session?.user.id;
+  const commentsEnabled = pod.data?.comments_enabled ?? false;
+  const commentCounts = useCommentCounts(podId, commentsEnabled);
 
   const nameById = useMemo(() => {
     const map = new Map<string, string>();
@@ -96,6 +99,14 @@ export default function PodDetailScreen() {
                 onPress={() => router.push(`/pod/${podId}/stats`)}
                 accessibilityLabel="Stats"
               />
+              {isOwner && (
+                <IconButton
+                  icon="cog-outline"
+                  size={22}
+                  onPress={() => router.push(`/pod/${podId}/settings`)}
+                  accessibilityLabel="Pod settings"
+                />
+              )}
             </View>
           ),
         }}
@@ -151,6 +162,14 @@ export default function PodDetailScreen() {
                 onPress={() =>
                   router.push({
                     pathname: `/pod/${podId}/add-game`,
+                    params: { gameId: item.game.id },
+                  })
+                }
+                commentsEnabled={commentsEnabled}
+                commentCount={commentCounts.data?.get(item.game.id) ?? 0}
+                onComments={() =>
+                  router.push({
+                    pathname: `/pod/${podId}/comments`,
                     params: { gameId: item.game.id },
                   })
                 }
@@ -271,10 +290,16 @@ function GameCard({
   game,
   canEdit,
   onPress,
+  commentsEnabled,
+  commentCount,
+  onComments,
 }: {
   game: GameWithPlayers;
   canEdit: boolean;
   onPress: () => void;
+  commentsEnabled: boolean;
+  commentCount: number;
+  onComments: () => void;
 }) {
   const theme = useTheme();
   const participants = [...game.game_players].sort((a, b) => {
@@ -340,6 +365,25 @@ function GameCard({
         >
           {game.note}
         </Text>
+      ) : null}
+      {commentsEnabled ? (
+        <Pressable
+          style={styles.commentsRow}
+          onPress={onComments}
+          hitSlop={spacing.xs}
+          accessibilityRole="button"
+          accessibilityLabel={`Comments (${commentCount})`}
+        >
+          <Icon source="comment-outline" size={16} color={colors.textMuted} />
+          <Text
+            variant="labelMedium"
+            style={{ color: theme.colors.onSurfaceVariant }}
+          >
+            {commentCount > 0
+              ? `${commentCount} comment${commentCount === 1 ? '' : 's'}`
+              : 'Add a comment'}
+          </Text>
+        </Pressable>
       ) : null}
     </Card>
   );
@@ -415,6 +459,13 @@ const styles = StyleSheet.create({
   note: {
     fontStyle: 'italic',
     marginTop: spacing.xs,
+  },
+  commentsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.xs,
+    alignSelf: 'flex-start',
   },
   participants: { gap: spacing.xs },
   participantRow: {

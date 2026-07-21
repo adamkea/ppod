@@ -60,6 +60,8 @@ function RootNavigator() {
         options={{ title: 'Log Game', presentation: 'modal' }}
       />
       <Stack.Screen name="pod/[id]/players" options={{ title: 'Players' }} />
+      <Stack.Screen name="pod/[id]/settings" options={{ title: 'Pod Settings' }} />
+      <Stack.Screen name="pod/[id]/comments" options={{ title: 'Comments' }} />
       <Stack.Screen name="pod/[id]/stats" options={{ title: 'Stats' }} />
       <Stack.Screen name="pod/[id]/series/index" options={{ title: 'Series' }} />
       <Stack.Screen
