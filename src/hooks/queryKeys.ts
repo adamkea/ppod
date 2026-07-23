@@ -1,5 +1,7 @@
 export const queryKeys = {
   pods: ['pods'] as const,
+  profile: (userId: string) => ['profile', userId] as const,
+  profiles: (userIds: string[]) => ['profiles', userIds.join(',')] as const,
   pod: (podId: string) => ['pod', podId] as const,
   members: (podId: string) => ['pod', podId, 'members'] as const,
   players: (podId: string) => ['pod', podId, 'players'] as const,

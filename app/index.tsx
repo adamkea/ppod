@@ -1,13 +1,12 @@
-import { Stack, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
-import { Button as PaperButton, Text, useTheme } from 'react-native-paper';
+import { Text, useTheme } from 'react-native-paper';
 
 import { Button } from '@/components/Button';
 import { PromptModal } from '@/components/PromptModal';
 import { Card, EmptyState, ErrorState, Loading } from '@/components/ui';
 import { useCreatePod, useJoinPod, usePods } from '@/hooks/usePods';
-import { useAuth } from '@/providers/AuthProvider';
 import { colors, spacing } from '@/theme';
 import type { Pod } from '@/types/database';
 
@@ -15,7 +14,6 @@ type Dialog = 'none' | 'create' | 'join';
 
 export default function PodsScreen() {
   const router = useRouter();
-  const { signOut } = useAuth();
   const pods = usePods();
   const createPod = useCreatePod();
   const joinPod = useJoinPod();
@@ -64,16 +62,6 @@ export default function PodsScreen() {
 
   return (
     <View style={styles.flex}>
-      <Stack.Screen
-        options={{
-          headerRight: () => (
-            <PaperButton mode="text" compact onPress={() => signOut()}>
-              Sign out
-            </PaperButton>
-          ),
-        }}
-      />
-
       {pods.isLoading ? (
         <Loading label="Loading your pods…" />
       ) : pods.isError ? (

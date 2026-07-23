@@ -6,6 +6,7 @@ import { PaperProvider } from 'react-native-paper';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { Loading } from '@/components/ui';
+import { ProfileHeaderButton } from '@/components/UserAvatar';
 import { useAuth } from '@/providers/AuthProvider';
 import { Providers } from '@/providers/Providers';
 import { colors, paperTheme } from '@/theme';
@@ -49,11 +50,18 @@ function RootNavigator() {
         headerTitleStyle: { color: colors.text },
         contentStyle: { backgroundColor: colors.bg },
         headerShadowVisible: false,
+        // Every screen gets the avatar in the top-right corner; tapping it
+        // opens profile settings.
+        headerRight: () => <ProfileHeaderButton />,
       }}
     >
       <Stack.Screen name="index" options={{ title: 'Your Pods' }} />
       <Stack.Screen name="sign-in" options={{ headerShown: false }} />
       <Stack.Screen name="reset-password" options={{ headerShown: false }} />
+      <Stack.Screen
+        name="profile"
+        options={{ title: 'Profile', headerRight: () => null }}
+      />
       <Stack.Screen name="pod/[id]/index" options={{ title: 'Pod' }} />
       <Stack.Screen
         name="pod/[id]/add-game"
