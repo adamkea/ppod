@@ -52,7 +52,21 @@ export default function ProfileScreen() {
     }
   }
 
-  // Picking an artwork saves the avatar right away.
+  // Choosing a card from the search saves it as the avatar immediately, using
+  // its default artwork (a null print id resolves to the default printing).
+  async function handleCommanderSelected(name: string) {
+    setError(null);
+    try {
+      await update.mutateAsync({
+        avatar_commander_name: name,
+        avatar_scryfall_id: null,
+      });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not save avatar.');
+    }
+  }
+
+  // Picking an alternate artwork is optional and also saves right away.
   async function handleArtSelected(art: ScryfallArt) {
     setPickerOpen(false);
     setError(null);
@@ -121,12 +135,14 @@ export default function ProfileScreen() {
         <View style={styles.section}>
           <SectionLabel>Avatar</SectionLabel>
           <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-            Pick any commander artwork as your avatar.
+            Pick any commander as your avatar — its default artwork is applied,
+            and you can switch to an alternate below if you like.
           </Text>
           <View style={styles.searchRow}>
             <CommanderSearch
               value={avatarSearch}
               onChange={setAvatarSearch}
+              onSelectSuggestion={handleCommanderSelected}
               placeholder="Search for a card…"
             />
           </View>

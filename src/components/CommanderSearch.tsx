@@ -20,6 +20,9 @@ export interface SavedCommanderOption {
 interface Props {
   value: string;
   onChange: (name: string) => void;
+  /** Fires only when a suggestion row is tapped (not on keystrokes), for
+   *  callers that act on a committed choice rather than in-progress typing. */
+  onSelectSuggestion?: (name: string) => void;
   placeholder?: string;
   /** Saved decks offered in a dropdown before the user starts typing a search. */
   savedOptions?: SavedCommanderOption[];
@@ -40,6 +43,7 @@ async function fetchSuggestions(query: string): Promise<string[]> {
 export function CommanderSearch({
   value,
   onChange,
+  onSelectSuggestion,
   placeholder = 'Commander (optional)',
   savedOptions = [],
   onSelectSaved,
@@ -118,6 +122,7 @@ export function CommanderSearch({
   function selectSuggestion(name: string) {
     setQuery(name);
     onChange(name);
+    onSelectSuggestion?.(name);
     setSuggestions([]);
     closeDropdown();
   }
