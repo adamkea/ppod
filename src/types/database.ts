@@ -117,8 +117,21 @@ export interface SeriesGameWithSeries extends SeriesGame {
   series: Pick<Series, 'name'> | null;
 }
 
+// An account's chosen nickname and avatar, shown on comments and in the app
+// header. The avatar is a commander artwork: a card name plus an optional
+// pinned Scryfall print id, resolved the same way as commander art.
+export interface UserProfile {
+  user_id: string;
+  nickname: string | null;
+  avatar_commander_name: string | null;
+  avatar_scryfall_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 // A member's comment on a game. `author_name` is captured at write time by
-// the add_game_comment RPC (linked player name, else email prefix).
+// the add_game_comment RPC (nickname, else linked player name, else email
+// prefix); the UI prefers the author's live nickname when one exists.
 export interface GameComment {
   id: string;
   game_id: string;

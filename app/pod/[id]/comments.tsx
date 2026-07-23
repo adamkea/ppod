@@ -1,5 +1,5 @@
 import { useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   FlatList,
   KeyboardAvoidingView,
@@ -12,8 +12,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { TextField } from '@/components/TextField';
 import { Card, EmptyState, ErrorState, Loading } from '@/components/ui';
+import { UserAvatar } from '@/components/UserAvatar';
 import { useAddComment, useDeleteComment, useGameComments } from '@/hooks/useComments';
 import { usePod } from '@/hooks/usePods';
+import { useProfiles } from '@/hooks/useProfile';
 import { confirmAsync } from '@/lib/confirm';
 import { formatTimestamp } from '@/lib/dates';
 import { useAuth } from '@/providers/AuthProvider';
@@ -34,6 +36,14 @@ export default function GameCommentsScreen() {
 
   const isOwner = pod.data?.owner_id === session?.user.id;
   const commentsEnabled = pod.data?.comments_enabled ?? false;
+
+  // Author profiles, so comments show each user's current nickname and avatar
+  // rather than the name captured when the comment was written.
+  const authorIds = useMemo(
+    () => Array.from(new Set((comments.data ?? []).map((c) => c.user_id))),
+    [comments.data],
+  );
+  const profiles = useProfiles(authorIds);
 
   const [body, setBody] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -93,12 +103,15 @@ export default function GameCommentsScreen() {
           }
           renderItem={({ item }) => {
             const canDelete = isOwner || item.user_id === session?.user.id;
+            const authorProfile = profiles.data?.get(item.user_id) ?? null;
+            const authorName = authorProfile?.nickname?.trim() || item.author_name;
             return (
               <Card style={styles.commentCard}>
+                <UserAvatar profile={authorProfile} size={32} />
                 <View style={styles.commentBody}>
                   <View style={styles.commentMeta}>
                     <Text variant="labelLarge" style={styles.author} numberOfLines={1}>
-                      {item.author_name}
+                      {authorName}
                     </Text>
                     <Text
                       variant="labelSmall"
