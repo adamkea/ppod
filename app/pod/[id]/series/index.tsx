@@ -1,7 +1,7 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
-import { Text, useTheme } from 'react-native-paper';
+import { Icon, Text, useTheme } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
@@ -128,9 +128,12 @@ function SeriesRow({
           {series.target_games ? ` of ${series.target_games}` : ''}
         </Text>
         {leaderHasWins ? (
-          <Text variant="labelMedium" style={styles.leader} numberOfLines={1}>
-            👑 {nameById.get(leader.playerId) ?? 'Unknown'} ({leader.wins})
-          </Text>
+          <View style={styles.leaderRow}>
+            <Icon source="crown" size={13} color={colors.winner} />
+            <Text variant="labelMedium" style={styles.leader} numberOfLines={1}>
+              {nameById.get(leader.playerId) ?? 'Unknown'} ({leader.wins})
+            </Text>
+          </View>
         ) : null}
       </View>
     </Card>
@@ -149,7 +152,13 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   meta: { flexShrink: 1 },
-  leader: { color: colors.winner },
+  leaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    flexShrink: 1,
+  },
+  leader: { color: colors.winner, flexShrink: 1 },
   footer: {
     padding: spacing.lg,
     borderTopWidth: 1,

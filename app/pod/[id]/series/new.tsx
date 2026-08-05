@@ -12,12 +12,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
 import { TextField } from '@/components/TextField';
-import { EmptyState, Loading } from '@/components/ui';
+import { EmptyState, Loading, SectionLabel } from '@/components/ui';
 import { usePlayers } from '@/hooks/usePlayers';
 import { usePod } from '@/hooks/usePods';
 import { useCreateSeries } from '@/hooks/useSeries';
 import { useAuth } from '@/providers/AuthProvider';
-import { colors, spacing } from '@/theme';
+import { colors, fonts, spacing } from '@/theme';
 
 export default function NewSeriesScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -124,9 +124,10 @@ export default function NewSeriesScreen() {
         />
 
         <View style={styles.pickerWrap}>
-          <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant }}>
-            Players · {selectedIds.length} in series
-          </Text>
+          <View style={styles.sectionRow}>
+            <SectionLabel>Players</SectionLabel>
+            <Text style={styles.sectionCount}>{selectedIds.length} in series</Text>
+          </View>
           <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
             Everyone in the draft. Each game is 1 v 1 between two of them.
           </Text>
@@ -157,7 +158,7 @@ export default function NewSeriesScreen() {
           keyboardType="number-pad"
         />
         <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-          A soft goal for tracking progress — the series stays open either way.
+          A soft goal for tracking progress. The series stays open either way.
         </Text>
 
         {error ? (
@@ -182,6 +183,16 @@ const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.bg },
   content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxl },
   pickerWrap: { gap: spacing.sm },
+  sectionRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+  },
+  sectionCount: {
+    fontFamily: fonts.mono,
+    fontSize: 12,
+    color: colors.textMuted,
+  },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   chip: { maxWidth: 220 },
   footer: {

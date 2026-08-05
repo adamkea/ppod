@@ -11,7 +11,7 @@ import { HelperText, Surface, Text, useTheme } from 'react-native-paper';
 
 import { Button } from './Button';
 import { TextField } from './TextField';
-import { radius, spacing } from '@/theme';
+import { colors, radius, spacing } from '@/theme';
 
 interface PromptModalProps {
   visible: boolean;
@@ -98,6 +98,8 @@ const styles = StyleSheet.create({
   },
   sheet: {
     borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
     padding: spacing.lg,
     gap: spacing.md,
   },

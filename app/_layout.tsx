@@ -1,3 +1,15 @@
+import {
+  IBMPlexMono_500Medium,
+  IBMPlexMono_700Bold,
+} from '@expo-google-fonts/ibm-plex-mono';
+import {
+  SpaceGrotesk_300Light,
+  SpaceGrotesk_400Regular,
+  SpaceGrotesk_500Medium,
+  SpaceGrotesk_600SemiBold,
+  SpaceGrotesk_700Bold,
+} from '@expo-google-fonts/space-grotesk';
+import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
@@ -9,7 +21,7 @@ import { Loading } from '@/components/ui';
 import { ProfileHeaderButton } from '@/components/UserAvatar';
 import { useAuth } from '@/providers/AuthProvider';
 import { Providers } from '@/providers/Providers';
-import { colors, paperTheme } from '@/theme';
+import { colors, fonts, paperTheme } from '@/theme';
 
 export const unstable_settings = {
   initialRouteName: 'index',
@@ -19,6 +31,16 @@ function RootNavigator() {
   const { session, initializing, isRecovery } = useAuth();
   const segments = useSegments();
   const router = useRouter();
+
+  const [fontsLoaded] = useFonts({
+    SpaceGrotesk_300Light,
+    SpaceGrotesk_400Regular,
+    SpaceGrotesk_500Medium,
+    SpaceGrotesk_600SemiBold,
+    SpaceGrotesk_700Bold,
+    IBMPlexMono_500Medium,
+    IBMPlexMono_700Bold,
+  });
 
   useEffect(() => {
     if (initializing) return;
@@ -34,7 +56,7 @@ function RootNavigator() {
     }
   }, [session, initializing, isRecovery, segments, router]);
 
-  if (initializing) {
+  if (initializing || !fontsLoaded) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.bg }}>
         <Loading label="Loading…" />
@@ -47,7 +69,7 @@ function RootNavigator() {
       screenOptions={{
         headerStyle: { backgroundColor: colors.bg },
         headerTintColor: colors.text,
-        headerTitleStyle: { color: colors.text },
+        headerTitleStyle: { color: colors.text, fontFamily: fonts.semibold },
         contentStyle: { backgroundColor: colors.bg },
         headerShadowVisible: false,
         // Every screen gets the avatar in the top-right corner; tapping it

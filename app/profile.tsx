@@ -12,7 +12,7 @@ import { Button } from '@/components/Button';
 import { CommanderArtPicker, ArtChooserRow } from '@/components/CommanderArtPicker';
 import { CommanderSearch } from '@/components/CommanderSearch';
 import { TextField } from '@/components/TextField';
-import { Loading } from '@/components/ui';
+import { Loading, SectionLabel } from '@/components/ui';
 import { UserAvatar } from '@/components/UserAvatar';
 import { useMyProfile, useUpdateMyProfile } from '@/hooks/useProfile';
 import type { ScryfallArt } from '@/lib/scryfall';
@@ -135,7 +135,7 @@ export default function ProfileScreen() {
         <View style={styles.section}>
           <SectionLabel>Avatar</SectionLabel>
           <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-            Pick any commander as your avatar — its default artwork is applied,
+            Pick any commander as your avatar. Its default artwork is applied,
             and you can switch to an alternate below if you like.
           </Text>
           <View style={styles.searchRow}>
@@ -174,27 +174,11 @@ export default function ProfileScreen() {
   );
 }
 
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  const theme = useTheme();
-  return (
-    <Text
-      variant="labelLarge"
-      style={[styles.sectionLabel, { color: theme.colors.onSurfaceVariant }]}
-    >
-      {children}
-    </Text>
-  );
-}
-
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.bg },
   content: { padding: spacing.lg, gap: spacing.xl },
   avatarWrap: { alignItems: 'center', gap: spacing.sm },
   section: { gap: spacing.sm },
-  sectionLabel: {
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
   searchRow: { zIndex: 10 },
   error: { paddingHorizontal: 0 },
   signOut: { marginTop: spacing.lg },

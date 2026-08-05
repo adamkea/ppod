@@ -1,12 +1,12 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Image, Pressable, SectionList, StyleSheet, View } from 'react-native';
-import { Chip, Icon, IconButton, Text, useTheme } from 'react-native-paper';
+import { Icon, IconButton, Text, useTheme } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
 import { PromptModal } from '@/components/PromptModal';
-import { Card, EmptyState, ErrorState, Loading } from '@/components/ui';
+import { Card, EmptyState, ErrorState, Loading, SectionLabel } from '@/components/ui';
 import { useCommentCounts } from '@/hooks/useComments';
 import { useGames } from '@/hooks/useGames';
 import { usePlayers } from '@/hooks/usePlayers';
@@ -17,7 +17,7 @@ import { formatDateHeading } from '@/lib/dates';
 import { summarizeSeriesForFeed, type SeriesFeedSummary } from '@/lib/series';
 import { commanderLabel, groupFeedByDate } from '@/lib/stats';
 import { useAuth } from '@/providers/AuthProvider';
-import { colors, radius, spacing } from '@/theme';
+import { colors, fonts, radius, spacing } from '@/theme';
 import type { GameWithPlayers } from '@/types/database';
 
 export default function PodDetailScreen() {
@@ -141,12 +141,7 @@ export default function PodDetailScreen() {
             />
           }
           renderSectionHeader={({ section }) => (
-            <Text
-              variant="labelLarge"
-              style={[styles.sectionHeader, { color: theme.colors.onSurfaceVariant }]}
-            >
-              {section.title}
-            </Text>
+            <SectionLabel style={styles.sectionHeader}>{section.title}</SectionLabel>
           )}
           renderItem={({ item }) =>
             item.kind === 'series' ? (
@@ -161,16 +156,16 @@ export default function PodDetailScreen() {
                 canEdit={isOwner}
                 onPress={() =>
                   router.push({
-                    pathname: `/pod/${podId}/add-game`,
-                    params: { gameId: item.game.id },
+                    pathname: '/pod/[id]/add-game',
+                    params: { id: podId, gameId: item.game.id },
                   })
                 }
                 commentsEnabled={commentsEnabled}
                 commentCount={commentCounts.data?.get(item.game.id) ?? 0}
                 onComments={() =>
                   router.push({
-                    pathname: `/pod/${podId}/comments`,
-                    params: { gameId: item.game.id },
+                    pathname: '/pod/[id]/comments',
+                    params: { id: podId, gameId: item.game.id },
                   })
                 }
               />
@@ -199,7 +194,8 @@ export default function PodDetailScreen() {
               onPress={() => router.push(`/pod/${podId}/add-game`)}
             />
             <Text variant="bodySmall" style={[styles.ownerHint, { color: theme.colors.onSurfaceVariant }]}>
-              You own this pod · share code {pod.data?.invite_code}
+              You own this pod. Friends join with code{' '}
+              <Text style={styles.ownerHintCode}>{pod.data?.invite_code}</Text>
             </Text>
           </>
         ) : pod.data ? (
@@ -219,16 +215,13 @@ function PodHeader({
   inviteCode?: string;
   onPlayers: () => void;
 }) {
-  const theme = useTheme();
   return (
     <View style={styles.podHeader}>
       <View style={styles.inviteRow}>
-        <View>
-          <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-            Invite code
-          </Text>
+        <View style={styles.inviteText}>
+          <SectionLabel>Invite code</SectionLabel>
           <Text variant="headlineSmall" style={styles.inviteCode}>
-            {inviteCode ?? '—'}
+            {inviteCode ?? ''}
           </Text>
         </View>
         <Button label="Players" variant="secondary" onPress={onPlayers} />
@@ -252,22 +245,37 @@ function CommanderCell({
   // Pinned art by print id when chosen, else the name's default printing.
   const artUri = useCommanderArt(commander, scryfallId).data ?? null;
 
-  const accent = isWinner ? colors.success : colors.danger;
+  // The winner's cell gets the gold treatment; everyone else stays neutral.
+  const borderColor = isWinner ? colors.winner : colors.border;
 
   return (
-    <View style={[gridStyles.cell, { borderColor: accent, backgroundColor: theme.colors.surfaceVariant }]}>
+    <View
+      style={[
+        gridStyles.cell,
+        { borderColor, backgroundColor: theme.colors.surfaceVariant },
+        isWinner && gridStyles.cellWinner,
+      ]}
+    >
       {artUri ? (
         <Image source={{ uri: artUri }} style={gridStyles.art} resizeMode="cover" />
       ) : (
         <View style={gridStyles.artPlaceholder}>
-          <Icon source="cards-outline" size={28} />
+          <Icon source="cards-outline" size={28} color={colors.textMuted} />
         </View>
       )}
-      <View style={[gridStyles.nameBar, { backgroundColor: accent + '33' }]}>
+      <View
+        style={[
+          gridStyles.nameBar,
+          isWinner && { backgroundColor: 'rgba(217, 164, 65, 0.16)' },
+        ]}
+      >
         {isWinner && <Icon source="crown" size={12} color={colors.winner} />}
         <Text
           variant="labelMedium"
-          style={[gridStyles.playerName, { color: accent }]}
+          style={[
+            gridStyles.playerName,
+            { color: isWinner ? colors.winner : colors.text },
+          ]}
           numberOfLines={1}
         >
           {name}
@@ -311,12 +319,7 @@ function GameCard({
 
   return (
     <Card onPress={canEdit ? onPress : undefined} style={styles.gameCard}>
-      <Text
-        variant="labelMedium"
-        style={[styles.gameType, { color: theme.colors.onSurfaceVariant }]}
-      >
-        {game.game_type}
-      </Text>
+      <Text style={styles.gameType}>{game.game_type}</Text>
       {useGrid ? (
         <View style={gridStyles.grid}>
           {participants.map((gp) => (
@@ -335,14 +338,18 @@ function GameCard({
             const cmd = commanderLabel(gp.commander, gp.partner_commander);
             return (
               <View key={gp.id} style={styles.participantRow}>
-                <Text
-                  variant="bodyMedium"
-                  style={[styles.participantName, gp.is_winner && styles.winnerName]}
-                  numberOfLines={1}
-                >
-                  {gp.is_winner ? '👑 ' : ''}
-                  {gp.players?.name ?? 'Unknown'}
-                </Text>
+                <View style={styles.participantNameRow}>
+                  {gp.is_winner && (
+                    <Icon source="crown" size={14} color={colors.winner} />
+                  )}
+                  <Text
+                    variant="bodyMedium"
+                    style={[styles.participantName, gp.is_winner && styles.winnerName]}
+                    numberOfLines={1}
+                  >
+                    {gp.players?.name ?? 'Unknown'}
+                  </Text>
+                </View>
                 {cmd ? (
                   <Text
                     variant="bodySmall"
@@ -407,9 +414,9 @@ function SeriesFeedCard({
   return (
     <Card onPress={onPress} style={styles.gameCard}>
       <View style={styles.seriesBadgeRow}>
-        <Chip compact mode="outlined" textStyle={styles.seriesBadgeText} style={styles.seriesBadge}>
-          SERIES
-        </Chip>
+        <View style={styles.seriesBadge}>
+          <Text style={styles.seriesBadgeText}>Series</Text>
+        </View>
         <Text variant="titleSmall" style={styles.seriesTitle} numberOfLines={1}>
           {series.name || 'Series'}
         </Text>
@@ -424,9 +431,12 @@ function SeriesFeedCard({
             : 'No games yet'}
         </Text>
         {leaderName ? (
-          <Text variant="labelMedium" style={styles.seriesLeader} numberOfLines={1}>
-            👑 {leaderName} ({series.leaderWins})
-          </Text>
+          <View style={styles.seriesLeaderRow}>
+            <Icon source="crown" size={13} color={colors.winner} />
+            <Text variant="labelMedium" style={styles.seriesLeader} numberOfLines={1}>
+              {leaderName} ({series.leaderWins})
+            </Text>
+          </View>
         ) : null}
       </View>
     </Card>
@@ -443,18 +453,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  inviteText: { gap: 2 },
   inviteCode: {
-    fontWeight: '800',
-    letterSpacing: 2,
+    fontFamily: fonts.monoBold,
+    letterSpacing: 3,
+    color: colors.text,
   },
   sectionHeader: {
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
     marginTop: spacing.sm,
   },
   gameCard: { gap: spacing.sm },
   gameType: {
-    textTransform: 'capitalize',
+    fontFamily: fonts.mono,
+    fontSize: 11,
+    letterSpacing: 1.4,
+    textTransform: 'uppercase',
+    color: colors.textMuted,
   },
   note: {
     fontStyle: 'italic',
@@ -474,15 +488,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
   },
+  participantNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    flexShrink: 1,
+  },
   participantName: { flexShrink: 1 },
-  winnerName: { color: colors.winner, fontWeight: '700' },
+  winnerName: { color: colors.winner, fontFamily: fonts.semibold },
   seriesBadgeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  seriesBadge: { backgroundColor: 'transparent' },
+  seriesBadge: {
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+  },
   seriesBadgeText: {
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-    marginVertical: 2,
+    fontFamily: fonts.mono,
+    fontSize: 10,
+    letterSpacing: 1.4,
+    textTransform: 'uppercase',
+    color: colors.textMuted,
   },
   seriesTitle: { flexShrink: 1 },
   seriesMatchup: {
@@ -492,7 +519,13 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   seriesMeta: { flexShrink: 1 },
-  seriesLeader: { color: colors.winner },
+  seriesLeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    flexShrink: 1,
+  },
+  seriesLeader: { color: colors.winner, flexShrink: 1 },
   commander: {
     flexShrink: 1,
     textAlign: 'right',
@@ -507,6 +540,12 @@ const styles = StyleSheet.create({
   ownerHint: {
     textAlign: 'center',
   },
+  ownerHintCode: {
+    fontFamily: fonts.mono,
+    fontSize: 12,
+    letterSpacing: 1,
+    color: colors.text,
+  },
 });
 
 const gridStyles = StyleSheet.create({
@@ -518,8 +557,11 @@ const gridStyles = StyleSheet.create({
   cell: {
     width: '48.5%',
     borderRadius: radius.sm,
-    borderWidth: 2,
+    borderWidth: 1,
     overflow: 'hidden',
+  },
+  cellWinner: {
+    borderWidth: 1.5,
   },
   art: {
     width: '100%',
@@ -539,7 +581,7 @@ const gridStyles = StyleSheet.create({
     gap: 3,
   },
   playerName: {
-    fontWeight: '700',
+    fontFamily: fonts.semibold,
     flexShrink: 1,
   },
   commanderText: {

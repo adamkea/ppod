@@ -16,7 +16,6 @@ import {
   HelperText,
   Icon,
   IconButton,
-  Surface,
   Text,
   useTheme,
 } from 'react-native-paper';
@@ -25,7 +24,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from './Button';
 import { CommanderSearch } from './CommanderSearch';
 import { CommanderArtPicker } from './CommanderArtPicker';
-import { radius, spacing } from '@/theme';
+import { SectionLabel } from './ui';
+import { colors, radius, spacing } from '@/theme';
 import { useCommanderArt } from '@/hooks/useCardArt';
 import { useGames } from '@/hooks/useGames';
 import {
@@ -288,18 +288,6 @@ export function PlayerProfileModal({ player, readOnly = false, onClose }: Props)
   );
 }
 
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  const theme = useTheme();
-  return (
-    <Text
-      variant="labelLarge"
-      style={[styles.sectionLabel, { color: theme.colors.onSurfaceVariant }]}
-    >
-      {children}
-    </Text>
-  );
-}
-
 // A compact "Choose art" affordance shown under a commander name in the add
 // form, previewing the picked artwork once chosen.
 function ArtChooser({
@@ -370,7 +358,7 @@ function CommanderRow({
   const hasPartner = !!item.partner_commander;
 
   return (
-    <Surface mode="flat" elevation={2} style={rowStyles.card}>
+    <View style={rowStyles.card}>
       {/* Art thumbnail(s) — tap to choose alternate art */}
       <View style={rowStyles.artWrap}>
         <ArtThumbnail
@@ -403,7 +391,7 @@ function CommanderRow({
         )}
         <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
           {record
-            ? `${Math.round((record.wins / record.games_played) * 100)}% wins · ${record.wins}/${record.games_played} game${record.games_played === 1 ? '' : 's'}`
+            ? `${record.wins} of ${record.games_played} won, ${Math.round((record.wins / record.games_played) * 100)}%`
             : 'No games played'}
         </Text>
       </View>
@@ -419,7 +407,7 @@ function CommanderRow({
           accessibilityLabel="Remove commander"
         />
       )}
-    </Surface>
+    </View>
   );
 }
 
@@ -486,6 +474,9 @@ const rowStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
     padding: spacing.sm,
     gap: spacing.md,
   },
@@ -503,10 +494,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: spacing.lg,
     gap: spacing.lg,
-  },
-  sectionLabel: {
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
   },
   commanderList: { gap: spacing.sm },
   addSection: { gap: spacing.sm },

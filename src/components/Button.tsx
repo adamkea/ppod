@@ -1,5 +1,13 @@
-import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
-import { Button as PaperButton, useTheme } from 'react-native-paper';
+import {
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  Text,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
+
+import { colors, fonts, radius, spacing } from '@/theme';
 
 type Variant = 'primary' | 'secondary' | 'danger' | 'ghost';
 
@@ -12,13 +20,9 @@ interface ButtonProps {
   style?: StyleProp<ViewStyle>;
 }
 
-const modeByVariant = {
-  primary: 'contained',
-  secondary: 'contained-tonal',
-  danger: 'outlined',
-  ghost: 'text',
-} as const;
-
+// Flat, bordered buttons in the ledger language: gold fill for the one primary
+// action on a screen, hairline outlines for everything else. Pressing nudges
+// the button down a pixel for a physical push.
 export function Button({
   label,
   onPress,
@@ -27,24 +31,87 @@ export function Button({
   disabled = false,
   style,
 }: ButtonProps) {
-  const theme = useTheme();
+  const isDisabled = disabled || loading;
+  const textColor =
+    variant === 'primary'
+      ? colors.primaryText
+      : variant === 'danger'
+        ? colors.danger
+        : variant === 'ghost'
+          ? colors.textMuted
+          : colors.text;
+
   return (
-    <PaperButton
-      mode={modeByVariant[variant]}
+    <Pressable
       onPress={onPress}
-      loading={loading}
-      disabled={disabled || loading}
-      textColor={variant === 'danger' ? theme.colors.error : undefined}
-      style={[variant === 'danger' && { borderColor: theme.colors.error }, style]}
-      contentStyle={styles.content}
-      labelStyle={styles.label}
+      disabled={isDisabled}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      style={({ pressed }) => [
+        styles.base,
+        variantStyles[variant],
+        pressed && styles.pressed,
+        pressed && pressedStyles[variant],
+        isDisabled && styles.disabled,
+        style,
+      ]}
     >
-      {label}
-    </PaperButton>
+      {loading ? (
+        <ActivityIndicator size={18} color={textColor} />
+      ) : (
+        <Text style={[styles.label, { color: textColor }]} numberOfLines={1}>
+          {label}
+        </Text>
+      )}
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { minHeight: 48 },
-  label: { fontSize: 15, fontWeight: '600' },
+  base: {
+    minHeight: 48,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    borderWidth: 1,
+  },
+  label: {
+    fontFamily: fonts.semibold,
+    fontSize: 15,
+    letterSpacing: 0.2,
+  },
+  pressed: {
+    transform: [{ translateY: 1 }],
+  },
+  disabled: {
+    opacity: 0.45,
+  },
+});
+
+const variantStyles = StyleSheet.create({
+  primary: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  secondary: {
+    backgroundColor: 'transparent',
+    borderColor: colors.borderStrong,
+  },
+  danger: {
+    backgroundColor: 'transparent',
+    borderColor: colors.danger,
+  },
+  ghost: {
+    backgroundColor: 'transparent',
+    borderColor: 'transparent',
+  },
+});
+
+const pressedStyles = StyleSheet.create({
+  primary: { backgroundColor: '#c2913a', borderColor: '#c2913a' },
+  secondary: { backgroundColor: colors.surfaceAlt },
+  danger: { backgroundColor: 'rgba(226, 106, 85, 0.12)' },
+  ghost: { backgroundColor: colors.surfaceAlt },
 });

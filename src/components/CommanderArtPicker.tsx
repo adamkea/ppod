@@ -12,7 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useArtworks, useCommanderArt } from '@/hooks/useCardArt';
 import type { ScryfallArt } from '@/lib/scryfall';
-import { radius, spacing } from '@/theme';
+import { colors, radius, spacing } from '@/theme';
 
 interface Props {
   /** The commander name to list artworks for; null keeps the picker closed. */
@@ -137,7 +137,7 @@ export function ArtChooserRow({
           </View>
         )}
         <Text variant="labelLarge" style={[chooserStyles.label, { color: theme.colors.primary }]}>
-          {scryfallId ? 'Custom art ✓' : 'Choose art (optional)'}
+          {scryfallId ? 'Custom art chosen' : 'Choose art (optional)'}
         </Text>
         <Icon source="chevron-right" size={20} color={theme.colors.onSurfaceVariant} />
       </View>
@@ -170,6 +170,8 @@ const styles = StyleSheet.create({
   sheet: {
     borderTopLeftRadius: radius.lg,
     borderTopRightRadius: radius.lg,
+    borderTopWidth: 1,
+    borderColor: colors.border,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
     maxHeight: '85%',

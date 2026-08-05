@@ -2,15 +2,14 @@ import { useLocalSearchParams } from 'expo-router';
 import { FlatList, StyleSheet, View } from 'react-native';
 import { Text, useTheme } from 'react-native-paper';
 
-import { Card, EmptyState, ErrorState, Loading } from '@/components/ui';
+import { Card, EmptyState, ErrorState, Loading, SectionLabel } from '@/components/ui';
 import { usePlayerStats } from '@/hooks/useStats';
-import { colors, spacing } from '@/theme';
+import { colors, fonts, spacing } from '@/theme';
 import type { PlayerStat } from '@/types/database';
 
 export default function StatsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const podId = id!;
-  const theme = useTheme();
   const { stats, isLoading, isError } = usePlayerStats(podId);
 
   if (isLoading) return <View style={styles.flex}><Loading label="Crunching stats…" /></View>;
@@ -25,14 +24,7 @@ export default function StatsScreen() {
         keyExtractor={(item) => item.player_id}
         contentContainerStyle={styles.list}
         ListHeaderComponent={
-          hasGames ? (
-            <Text
-              variant="labelLarge"
-              style={[styles.heading, { color: theme.colors.onSurfaceVariant }]}
-            >
-              Wins per player
-            </Text>
-          ) : null
+          hasGames ? <SectionLabel>Wins per player</SectionLabel> : null
         }
         ListEmptyComponent={
           <EmptyState
@@ -55,23 +47,16 @@ function StatRow({ stat, rank }: { stat: PlayerStat; rank: number }) {
 
   return (
     <Card style={styles.row}>
-      <Text
-        variant="titleMedium"
-        style={[styles.rank, { color: theme.colors.onSurfaceVariant }]}
-      >
-        {rank}
-      </Text>
+      <Text style={styles.rank}>{rank}</Text>
       <View style={styles.rowMain}>
         <Text variant="titleMedium">{stat.name}</Text>
         <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
           {stat.games_played} {stat.games_played === 1 ? 'game' : 'games'}
-          {stat.games_played > 0 ? ` · ${winRate}% win rate` : ''}
+          {stat.games_played > 0 ? `, ${winRate}% win rate` : ''}
         </Text>
       </View>
       <View style={styles.winsBox}>
-        <Text variant="headlineSmall" style={styles.wins}>
-          {stat.wins}
-        </Text>
+        <Text style={styles.wins}>{stat.wins}</Text>
         <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
           {stat.wins === 1 ? 'win' : 'wins'}
         </Text>
@@ -83,17 +68,20 @@ function StatRow({ stat, rank }: { stat: PlayerStat; rank: number }) {
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.bg },
   list: { padding: spacing.lg, gap: spacing.md, flexGrow: 1 },
-  heading: {
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   rank: {
-    fontWeight: '800',
-    width: 24,
+    fontFamily: fonts.mono,
+    fontSize: 14,
+    color: colors.textMuted,
+    width: 26,
     textAlign: 'center',
   },
   rowMain: { flex: 1, gap: 2 },
   winsBox: { alignItems: 'center', minWidth: 48 },
-  wins: { color: colors.winner, fontWeight: '800' },
+  wins: {
+    fontFamily: fonts.monoBold,
+    fontSize: 24,
+    lineHeight: 30,
+    color: colors.winner,
+  },
 });

@@ -85,7 +85,7 @@ export default function PlayersScreen() {
           ListEmptyComponent={
             <EmptyState
               title="No players yet"
-              subtitle="Add the people in your playgroup. They don't need accounts — a name is enough."
+              subtitle="Add the people in your playgroup. They don't need accounts, a name is enough."
             />
           }
           renderItem={({ item }) => (

@@ -12,7 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@/components/Button';
 import { TextField } from '@/components/TextField';
 import { useAuth } from '@/providers/AuthProvider';
-import { colors, spacing } from '@/theme';
+import { colors, fonts, spacing } from '@/theme';
 
 export default function ResetPasswordScreen() {
   const { updatePassword } = useAuth();
@@ -52,9 +52,7 @@ export default function ResetPasswordScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.header}>
-          <Text variant="headlineLarge" style={styles.title}>
-            Set New Password
-          </Text>
+          <Text style={styles.title}>Set a new password</Text>
           <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
             Choose a new password for your account.
           </Text>
@@ -107,6 +105,12 @@ const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.bg },
   container: { flexGrow: 1, paddingHorizontal: spacing.lg, gap: spacing.xxl },
   header: { gap: spacing.sm },
-  title: { fontWeight: '800' },
+  title: {
+    fontFamily: fonts.bold,
+    fontSize: 28,
+    lineHeight: 34,
+    letterSpacing: -0.3,
+    color: colors.text,
+  },
   form: { gap: spacing.lg },
 });
