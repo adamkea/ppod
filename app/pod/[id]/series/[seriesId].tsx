@@ -1,11 +1,11 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
-import { Chip, Divider, Text, useTheme } from 'react-native-paper';
+import { Chip, Divider, Icon, Text, useTheme } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
-import { Card, EmptyState, ErrorState, Loading } from '@/components/ui';
+import { Card, EmptyState, ErrorState, Loading, SectionLabel } from '@/components/ui';
 import { usePlayers } from '@/hooks/usePlayers';
 import { usePod } from '@/hooks/usePods';
 import {
@@ -20,7 +20,7 @@ import { confirmAsync } from '@/lib/confirm';
 import { formatDateHeading, todayISO } from '@/lib/dates';
 import { computeStandings } from '@/lib/series';
 import { useAuth } from '@/providers/AuthProvider';
-import { colors, spacing } from '@/theme';
+import { colors, fonts, spacing } from '@/theme';
 import type { SeriesGame } from '@/types/database';
 
 export default function SeriesDetailScreen() {
@@ -148,39 +148,40 @@ export default function SeriesDetailScreen() {
           <View style={styles.headerArea}>
             {/* Standings */}
             <Card style={styles.card}>
-              <Text variant="labelLarge" style={[styles.cardTitle, mutedColor]}>
-                Standings
-              </Text>
+              <SectionLabel>Standings</SectionLabel>
               <View style={styles.standingsHead}>
-                <Text variant="labelMedium" style={[styles.colName, mutedColor]}>
-                  Player
-                </Text>
-                <Text variant="labelMedium" style={[styles.colNum, mutedColor]}>W</Text>
-                <Text variant="labelMedium" style={[styles.colNum, mutedColor]}>L</Text>
-                <Text variant="labelMedium" style={[styles.colNum, mutedColor]}>D</Text>
-                <Text variant="labelMedium" style={[styles.colNum, mutedColor]}>GP</Text>
+                <Text style={[styles.colHead, styles.colName]}>Player</Text>
+                <Text style={[styles.colHead, styles.colNum]}>W</Text>
+                <Text style={[styles.colHead, styles.colNum]}>L</Text>
+                <Text style={[styles.colHead, styles.colNum]}>D</Text>
+                <Text style={[styles.colHead, styles.colNum]}>GP</Text>
               </View>
               <Divider />
-              {standings.map((st, i) => (
-                <View key={st.playerId} style={styles.standingsRow}>
-                  <Text variant="bodyMedium" style={styles.colName} numberOfLines={1}>
-                    {i === 0 && st.wins > 0 ? '👑 ' : ''}
-                    {nameOf(st.playerId)}
-                  </Text>
-                  <Text variant="bodyMedium" style={[styles.colNum, styles.winNum]}>
-                    {st.wins}
-                  </Text>
-                  <Text variant="bodyMedium" style={[styles.colNum, mutedColor]}>
-                    {st.losses}
-                  </Text>
-                  <Text variant="bodyMedium" style={[styles.colNum, mutedColor]}>
-                    {st.draws}
-                  </Text>
-                  <Text variant="bodyMedium" style={[styles.colNum, mutedColor]}>
-                    {st.played}
-                  </Text>
-                </View>
-              ))}
+              {standings.map((st, i) => {
+                const isLeader = i === 0 && st.wins > 0;
+                return (
+                  <View key={st.playerId} style={styles.standingsRow}>
+                    <View style={[styles.colName, styles.leaderRow]}>
+                      {isLeader && (
+                        <Icon source="crown" size={13} color={colors.winner} />
+                      )}
+                      <Text
+                        variant="bodyMedium"
+                        style={isLeader ? styles.leaderName : undefined}
+                        numberOfLines={1}
+                      >
+                        {nameOf(st.playerId)}
+                      </Text>
+                    </View>
+                    <Text style={[styles.colNum, styles.num, styles.winNum]}>
+                      {st.wins}
+                    </Text>
+                    <Text style={[styles.colNum, styles.num]}>{st.losses}</Text>
+                    <Text style={[styles.colNum, styles.num]}>{st.draws}</Text>
+                    <Text style={[styles.colNum, styles.num]}>{st.played}</Text>
+                  </View>
+                );
+              })}
               <Text variant="bodySmall" style={[styles.meta, mutedColor]}>
                 {allGames.length} game{allGames.length === 1 ? '' : 's'} played
                 {s.target_games ? ` of ${s.target_games}` : ''}
@@ -190,9 +191,7 @@ export default function SeriesDetailScreen() {
             {/* Log a game */}
             {isOwner ? (
               <Card style={styles.card}>
-                <Text variant="labelLarge" style={[styles.cardTitle, mutedColor]}>
-                  Log a game
-                </Text>
+                <SectionLabel>Log a game</SectionLabel>
                 <PickerRow
                   label="Player one"
                   rosterIds={rosterIds}
@@ -236,11 +235,7 @@ export default function SeriesDetailScreen() {
               </Card>
             ) : null}
 
-            {allGames.length > 0 ? (
-              <Text variant="labelLarge" style={[styles.sectionTitle, mutedColor]}>
-                Games
-              </Text>
-            ) : null}
+            {allGames.length > 0 ? <SectionLabel>Games</SectionLabel> : null}
           </View>
         }
         ListEmptyComponent={
@@ -264,22 +259,20 @@ export default function SeriesDetailScreen() {
               onPress={isOwner ? () => confirmDeleteGame(item) : undefined}
               style={styles.gameRow}
             >
-              <Text variant="labelMedium" style={[styles.gameNumber, mutedColor]}>
-                #{gameNumber}
-              </Text>
+              <Text style={styles.gameNumber}>{gameNumber}</Text>
               <View style={styles.gameMain}>
                 <Text variant="bodyMedium" style={mutedColor} numberOfLines={1}>
                   <Text variant="bodyMedium" style={oneWon ? styles.winnerText : mutedColor}>
-                    {oneWon ? '👑 ' : ''}{nameOf(item.player_one_id)}
+                    {nameOf(item.player_one_id)}
                   </Text>
-                  <Text variant="bodySmall" style={mutedColor}>  vs  </Text>
+                  <Text style={styles.vs}>{'  vs  '}</Text>
                   <Text variant="bodyMedium" style={twoWon ? styles.winnerText : mutedColor}>
-                    {twoWon ? '👑 ' : ''}{nameOf(item.player_two_id)}
+                    {nameOf(item.player_two_id)}
                   </Text>
                 </Text>
                 {isDraw ? (
                   <Text variant="bodySmall" style={mutedColor}>
-                    🤝 Draw
+                    Draw
                   </Text>
                 ) : null}
                 {item.note ? (
@@ -357,10 +350,6 @@ const styles = StyleSheet.create({
   list: { padding: spacing.lg, gap: spacing.md, flexGrow: 1 },
   headerArea: { gap: spacing.lg, marginBottom: spacing.xs },
   card: { gap: spacing.sm },
-  cardTitle: {
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
   // Standings table
   standingsHead: {
     flexDirection: 'row',
@@ -372,13 +361,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: spacing.xs,
   },
+  colHead: {
+    fontFamily: fonts.mono,
+    fontSize: 11,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    color: colors.textMuted,
+  },
   colName: { flex: 1 },
   colNum: {
     width: 34,
     textAlign: 'center',
-    fontVariant: ['tabular-nums'],
   },
-  winNum: { fontWeight: '700' },
+  num: {
+    fontFamily: fonts.mono,
+    fontSize: 14,
+    color: colors.textMuted,
+  },
+  winNum: {
+    fontFamily: fonts.monoBold,
+    color: colors.text,
+  },
+  leaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  leaderName: { color: colors.winner, fontFamily: fonts.semibold },
   meta: { marginTop: spacing.xs },
   // Log a game
   pickerRow: { gap: spacing.xs },
@@ -387,10 +396,6 @@ const styles = StyleSheet.create({
   winnerArea: { gap: spacing.sm, marginTop: spacing.xs },
   winnerButtons: { flexDirection: 'row', gap: spacing.md },
   winnerButton: { flex: 1 },
-  sectionTitle: {
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
   // Game history
   gameRow: {
     flexDirection: 'row',
@@ -398,9 +403,19 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     paddingVertical: spacing.md,
   },
-  gameNumber: { width: 32 },
+  gameNumber: {
+    width: 32,
+    fontFamily: fonts.mono,
+    fontSize: 13,
+    color: colors.textMuted,
+  },
   gameMain: { flex: 1, gap: 2 },
-  winnerText: { color: colors.winner, fontWeight: '700' },
+  vs: {
+    fontFamily: fonts.mono,
+    fontSize: 11,
+    color: colors.textMuted,
+  },
+  winnerText: { color: colors.winner, fontFamily: fonts.semibold },
   gameNote: { fontStyle: 'italic' },
   footerArea: { marginTop: spacing.lg },
 });

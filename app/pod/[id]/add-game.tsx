@@ -15,7 +15,7 @@ import { Button } from '@/components/Button';
 import { CommanderSearch } from '@/components/CommanderSearch';
 import { DateField } from '@/components/DateField';
 import { TextField } from '@/components/TextField';
-import { Card, EmptyState, Loading } from '@/components/ui';
+import { Card, EmptyState, Loading, SectionLabel } from '@/components/ui';
 import { useDeleteGame, useGame, useLogGame, useUpdateGame } from '@/hooks/useGames';
 import { usePlayers } from '@/hooks/usePlayers';
 import { usePlayerCommanders } from '@/hooks/usePlayerCommanders';
@@ -24,7 +24,7 @@ import { confirmAsync } from '@/lib/confirm';
 import { todayISO } from '@/lib/dates';
 import { useAuth } from '@/providers/AuthProvider';
 import { commanderLabel } from '@/lib/stats';
-import { colors, spacing } from '@/theme';
+import { colors, fonts, spacing } from '@/theme';
 import type { ParticipantInput, PlayerCommander } from '@/types/database';
 
 interface Entry {
@@ -232,12 +232,10 @@ export default function AddGameScreen() {
           </View>
         </View>
 
-        <Text
-          variant="labelLarge"
-          style={[styles.sectionTitle, { color: theme.colors.onSurfaceVariant }]}
-        >
-          Players · {selectedCount} playing
-        </Text>
+        <View style={styles.sectionRow}>
+          <SectionLabel>Players</SectionLabel>
+          <Text style={styles.sectionCount}>{selectedCount} playing</Text>
+        </View>
 
         <View style={styles.players}>
           {orderedPlayers.map((player) => {
@@ -391,9 +389,15 @@ const styles = StyleSheet.create({
   content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxl },
   metaRow: { flexDirection: 'row', gap: spacing.md },
   metaItem: { flex: 1, gap: spacing.xs },
-  sectionTitle: {
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+  sectionRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+  },
+  sectionCount: {
+    fontFamily: fonts.mono,
+    fontSize: 12,
+    color: colors.textMuted,
   },
   players: { gap: spacing.md },
   playerCard: { gap: spacing.md },

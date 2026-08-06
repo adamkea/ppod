@@ -19,7 +19,7 @@ import { useProfiles } from '@/hooks/useProfile';
 import { confirmAsync } from '@/lib/confirm';
 import { formatTimestamp } from '@/lib/dates';
 import { useAuth } from '@/providers/AuthProvider';
-import { colors, spacing } from '@/theme';
+import { colors, fonts, spacing } from '@/theme';
 import type { GameComment } from '@/types/database';
 
 export default function GameCommentsScreen() {
@@ -113,10 +113,7 @@ export default function GameCommentsScreen() {
                     <Text variant="labelLarge" style={styles.author} numberOfLines={1}>
                       {authorName}
                     </Text>
-                    <Text
-                      variant="labelSmall"
-                      style={{ color: theme.colors.onSurfaceVariant }}
-                    >
+                    <Text style={styles.timestamp}>
                       {formatTimestamp(item.created_at)}
                     </Text>
                   </View>
@@ -184,6 +181,11 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   author: { flexShrink: 1 },
+  timestamp: {
+    fontFamily: fonts.mono,
+    fontSize: 10,
+    color: colors.textMuted,
+  },
   footer: {
     padding: spacing.lg,
     paddingBottom: spacing.md,

@@ -10,7 +10,7 @@ import {
   useTheme,
 } from 'react-native-paper';
 
-import { radius, spacing } from '@/theme';
+import { colors, fonts, radius, spacing } from '@/theme';
 
 export interface SavedCommanderOption {
   id: string;
@@ -217,6 +217,8 @@ const styles = StyleSheet.create({
   // the Card wrapper clips overflow, which would cut the list off.
   dropdown: {
     borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
     overflow: 'hidden',
   },
   dropdownScroll: { maxHeight: 308 },
@@ -224,8 +226,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingTop: spacing.sm,
     paddingBottom: spacing.xs,
+    fontFamily: fonts.mono,
+    fontSize: 10,
+    letterSpacing: 1.2,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
   },
   suggestion: {
     paddingHorizontal: spacing.md,

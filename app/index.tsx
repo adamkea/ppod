@@ -7,7 +7,7 @@ import { Button } from '@/components/Button';
 import { PromptModal } from '@/components/PromptModal';
 import { Card, EmptyState, ErrorState, Loading } from '@/components/ui';
 import { useCreatePod, useJoinPod, usePods } from '@/hooks/usePods';
-import { colors, spacing } from '@/theme';
+import { colors, fonts, spacing } from '@/theme';
 import type { Pod } from '@/types/database';
 
 type Dialog = 'none' | 'create' | 'join';
@@ -131,9 +131,12 @@ function PodRow({ pod, onPress }: { pod: Pod; onPress: () => void }) {
   return (
     <Card onPress={onPress} style={styles.podCard}>
       <Text variant="titleMedium">{pod.name}</Text>
-      <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-        Invite code · {pod.invite_code}
-      </Text>
+      <View style={styles.podMetaRow}>
+        <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+          Invite code
+        </Text>
+        <Text style={styles.podCode}>{pod.invite_code}</Text>
+      </View>
     </Card>
   );
 }
@@ -142,6 +145,13 @@ const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.bg },
   list: { padding: spacing.lg, gap: spacing.md, flexGrow: 1 },
   podCard: { gap: spacing.xs },
+  podMetaRow: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.sm },
+  podCode: {
+    fontFamily: fonts.mono,
+    fontSize: 12,
+    letterSpacing: 1.5,
+    color: colors.text,
+  },
   footer: {
     flexDirection: 'row',
     gap: spacing.md,

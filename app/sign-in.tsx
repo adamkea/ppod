@@ -12,7 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@/components/Button';
 import { TextField } from '@/components/TextField';
 import { useAuth } from '@/providers/AuthProvider';
-import { colors, spacing } from '@/theme';
+import { colors, fonts, spacing } from '@/theme';
 
 export default function SignInScreen() {
   const { signIn, signUp, resetPassword } = useAuth();
@@ -70,9 +70,15 @@ export default function SignInScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.header}>
-          <Text variant="headlineLarge" style={styles.title}>
-            Pod Tracker
-          </Text>
+          {/* The pod, seen from above: four seats at the table, one holding the
+              win. Plain bordered circles, no imagery to load. */}
+          <View style={styles.mark}>
+            <View style={[styles.seat, styles.seatWinner]} />
+            <View style={styles.seat} />
+            <View style={styles.seat} />
+            <View style={styles.seat} />
+          </View>
+          <Text style={styles.title}>Pod Tracker</Text>
           <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
             {mode === 'forgot'
               ? "Enter your email and we'll send you a reset link."
@@ -162,6 +168,27 @@ const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.bg },
   container: { flexGrow: 1, paddingHorizontal: spacing.lg, gap: spacing.xxl },
   header: { gap: spacing.sm },
-  title: { fontWeight: '800' },
+  mark: { flexDirection: 'row', marginBottom: spacing.sm },
+  seat: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 1.5,
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.bg,
+    marginRight: -5,
+  },
+  seatWinner: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+    zIndex: 1,
+  },
+  title: {
+    fontFamily: fonts.bold,
+    fontSize: 34,
+    lineHeight: 40,
+    letterSpacing: -0.5,
+    color: colors.text,
+  },
   form: { gap: spacing.lg },
 });
