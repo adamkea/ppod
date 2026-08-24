@@ -301,6 +301,11 @@ export default function SeriesDetailScreen() {
         ListFooterComponent={
           isOwner ? (
             <View style={styles.footerArea}>
+              <Button
+                label="Edit series"
+                variant="secondary"
+                onPress={() => router.push(`/pod/${podId}/series/${s.id}/edit`)}
+              />
               <Button label="Delete series" variant="danger" onPress={confirmDeleteSeries} />
             </View>
           ) : null
@@ -434,5 +439,5 @@ const styles = StyleSheet.create({
   },
   winnerText: { color: colors.winner, fontFamily: fonts.semibold },
   gameNote: { fontStyle: 'italic' },
-  footerArea: { marginTop: spacing.lg },
+  footerArea: { marginTop: spacing.lg, gap: spacing.md },
 });
