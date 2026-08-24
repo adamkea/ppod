@@ -143,9 +143,20 @@ export async function fetchSetIcon(uri: string): Promise<string | null> {
  * Drop the hard-coded fills and put one on the root `<svg>` — children inherit
  * it — so a symbol takes whatever colour it's rendered in. `fill="none"` is
  * left alone: it's what keeps the hollow parts of a two-tone symbol hollow.
+ *
+ * The result is deliberately a single line with no prolog: react-native-web's
+ * <Image> reads svg data uris with /^(data:image\/svg\+xml;utf8,)(.*)/, and
+ * `.` doesn't match a newline — a pretty-printed symbol would be truncated at
+ * its first line break.
  */
 export function tintSvg(svg: string, color: string): string {
   return svg
+    .replace(/<\?xml[\s\S]*?\?>/g, '') // prolog — react-native-svg wants the <svg> alone
+    .replace(/<!DOCTYPE[\s\S]*?>/gi, '')
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/<style[\s\S]*?<\/style>/gi, '') // a stylesheet would out-rank our fill
     .replace(/\sfill="(?!none")[^"]*"/g, '')
-    .replace(/<svg\b/, `<svg fill="${color}"`);
+    .replace(/<svg\b/, `<svg fill="${color}"`)
+    .replace(/\s+/g, ' ') // whitespace runs are separators in svg; collapsing is safe
+    .trim();
 }

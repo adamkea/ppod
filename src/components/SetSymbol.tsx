@@ -20,6 +20,7 @@ export interface SetSymbolProps {
 export function SetSymbol({ uri, size = 16, color, label }: SetSymbolProps) {
   const icon = useSetIcon(uri);
   const box = { width: size, height: size };
+  const tint = color ?? colors.text;
 
   if (!icon.data) return <View style={box} />;
 
@@ -31,9 +32,13 @@ export function SetSymbol({ uri, size = 16, color, label }: SetSymbolProps) {
       accessibilityLabel={label ? `${label} set symbol` : undefined}
     >
       <SvgXml
-        xml={tintSvg(icon.data, color ?? colors.text)}
+        xml={tintSvg(icon.data, tint)}
         width={size}
         height={size}
+        // Belt and braces alongside the fill tintSvg writes onto the root:
+        // `fill` covers children that inherit, `color` resolves currentColor.
+        fill={tint}
+        color={tint}
       />
     </View>
   );
