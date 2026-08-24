@@ -11,6 +11,7 @@ import { Chip, Text, useTheme } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
+import { SetSearch, type SelectedSet } from '@/components/SetSearch';
 import { TextField } from '@/components/TextField';
 import { EmptyState, Loading, SectionLabel } from '@/components/ui';
 import { usePlayers } from '@/hooks/usePlayers';
@@ -34,6 +35,10 @@ export default function NewSeriesScreen() {
   const isOwner = pod.data?.owner_id === session?.user.id;
 
   const [name, setName] = useState('');
+  const [set, setSet] = useState<SelectedSet | null>(null);
+  // The name we last filled in from a set, so picking a different set can
+  // replace it while a name the user typed themselves is left alone.
+  const [autoName, setAutoName] = useState('');
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [target, setTarget] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -47,6 +52,16 @@ export default function NewSeriesScreen() {
 
   function toggle(playerId: string) {
     setSelected((prev) => ({ ...prev, [playerId]: !prev[playerId] }));
+  }
+
+  function handleSetChange(next: SelectedSet | null) {
+    setSet(next);
+    // A series is usually just "the set we're drafting", so seed the name from
+    // it — unless the name already says something the user chose.
+    if (!name.trim() || name === autoName) {
+      setName(next?.name ?? '');
+      setAutoName(next?.name ?? '');
+    }
   }
 
   async function handleCreate() {
@@ -70,6 +85,7 @@ export default function NewSeriesScreen() {
         name,
         playerIds: selectedIds,
         targetGames,
+        set: set && { code: set.code, name: set.name, iconUri: set.iconUri },
       });
       // Replace so Back returns to the series list, not this form.
       router.replace(`/pod/${podId}/series/${series.id}`);
@@ -116,6 +132,14 @@ export default function NewSeriesScreen() {
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
+        <View style={styles.setWrap}>
+          <SetSearch value={set} onChange={handleSetChange} />
+          <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+            The set you’re playing. Its symbol shows beside the series everywhere
+            it’s listed.
+          </Text>
+        </View>
+
         <TextField
           label="Name (optional)"
           value={name}
@@ -182,6 +206,7 @@ export default function NewSeriesScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.bg },
   content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxl },
+  setWrap: { gap: spacing.xs },
   pickerWrap: { gap: spacing.sm },
   sectionRow: {
     flexDirection: 'row',

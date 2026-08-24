@@ -48,6 +48,7 @@ interface CreateArgs {
   name: string;
   playerIds: string[];
   targetGames: number | null;
+  set: seriesApi.SeriesSetInput | null;
 }
 
 export function useCreateSeries(podId: string) {

@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
 import { PromptModal } from '@/components/PromptModal';
+import { SetSymbol } from '@/components/SetSymbol';
 import { Card, EmptyState, ErrorState, Loading, SectionLabel } from '@/components/ui';
 import { useCommentCounts } from '@/hooks/useComments';
 import { useGames } from '@/hooks/useGames';
@@ -417,8 +418,11 @@ function SeriesFeedCard({
         <View style={styles.seriesBadge}>
           <Text style={styles.seriesBadgeText}>Series</Text>
         </View>
+        {series.setIconUri ? (
+          <SetSymbol uri={series.setIconUri} size={16} label={series.setName} />
+        ) : null}
         <Text variant="titleSmall" style={styles.seriesTitle} numberOfLines={1}>
-          {series.name || 'Series'}
+          {series.name || series.setName || 'Series'}
         </Text>
       </View>
       <View style={styles.seriesMatchup}>

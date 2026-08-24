@@ -87,6 +87,12 @@ export interface Series {
   pod_id: string;
   name: string | null;
   target_games: number | null;
+  // The Magic set the series is played in, denormalised from Scryfall so a
+  // series row renders its set symbol without a second lookup. All null when
+  // no set was chosen.
+  set_code: string | null;
+  set_name: string | null;
+  set_icon_uri: string | null;
   created_at: string;
 }
 
@@ -114,7 +120,7 @@ export interface SeriesGame {
 // A series game joined with its parent series' name — used to show series games
 // in the pod's main game log alongside regular games.
 export interface SeriesGameWithSeries extends SeriesGame {
-  series: Pick<Series, 'name'> | null;
+  series: Pick<Series, 'name' | 'set_code' | 'set_name' | 'set_icon_uri'> | null;
 }
 
 // An account's chosen nickname and avatar, shown on comments and in the app

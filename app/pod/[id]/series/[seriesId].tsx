@@ -5,6 +5,7 @@ import { Chip, Divider, Icon, Text, useTheme } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
+import { SetSymbol } from '@/components/SetSymbol';
 import { Card, EmptyState, ErrorState, Loading, SectionLabel } from '@/components/ui';
 import { usePlayers } from '@/hooks/usePlayers';
 import { usePod } from '@/hooks/usePods';
@@ -136,7 +137,7 @@ export default function SeriesDetailScreen() {
 
   return (
     <View style={styles.flex}>
-      <Stack.Screen options={{ title: s.name || 'Series' }} />
+      <Stack.Screen options={{ title: s.name || s.set_name || 'Series' }} />
 
       <FlatList
         data={allGames}
@@ -146,6 +147,16 @@ export default function SeriesDetailScreen() {
         onRefresh={() => games.refetch()}
         ListHeaderComponent={
           <View style={styles.headerArea}>
+            {/* The set being played — the screen title carries the name. */}
+            {s.set_code ? (
+              <View style={styles.setLine}>
+                <SetSymbol uri={s.set_icon_uri} size={16} label={s.set_name} />
+                <Text variant="bodySmall" style={mutedColor} numberOfLines={1}>
+                  {s.set_name ?? s.set_code.toUpperCase()}
+                </Text>
+              </View>
+            ) : null}
+
             {/* Standings */}
             <Card style={styles.card}>
               <SectionLabel>Standings</SectionLabel>
@@ -349,6 +360,12 @@ const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.bg },
   list: { padding: spacing.lg, gap: spacing.md, flexGrow: 1 },
   headerArea: { gap: spacing.lg, marginBottom: spacing.xs },
+  setLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: -spacing.sm,
+  },
   card: { gap: spacing.sm },
   // Standings table
   standingsHead: {
