@@ -44,17 +44,33 @@ export function useSeriesGames(seriesId: string) {
   });
 }
 
-interface CreateArgs {
+// The same fields whether a series is being created or edited.
+interface SeriesArgs {
   name: string;
   playerIds: string[];
   targetGames: number | null;
+  set: seriesApi.SeriesSetInput | null;
 }
 
 export function useCreateSeries(podId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (args: CreateArgs) => seriesApi.createSeries({ podId, ...args }),
+    mutationFn: (args: SeriesArgs) => seriesApi.createSeries({ podId, ...args }),
     onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.seriesList(podId) }),
+  });
+}
+
+export function useUpdateSeries(podId: string, seriesId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: SeriesArgs) => seriesApi.updateSeries({ seriesId, ...args }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.series(seriesId) });
+      qc.invalidateQueries({ queryKey: queryKeys.seriesPlayers(seriesId) });
+      qc.invalidateQueries({ queryKey: queryKeys.seriesList(podId) });
+      // The main game log shows each series' name and set symbol.
+      qc.invalidateQueries({ queryKey: queryKeys.podSeriesGames(podId) });
+    },
   });
 }
 

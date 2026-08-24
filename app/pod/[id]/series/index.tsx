@@ -5,6 +5,7 @@ import { Icon, Text, useTheme } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
+import { SetSymbol } from '@/components/SetSymbol';
 import { Card, EmptyState, ErrorState, Loading } from '@/components/ui';
 import { usePlayers } from '@/hooks/usePlayers';
 import { usePod } from '@/hooks/usePods';
@@ -106,9 +107,14 @@ function SeriesRow({
 
   return (
     <Card onPress={onPress} style={styles.row}>
-      <Text variant="titleSmall" numberOfLines={1}>
-        {series.name || rosterNames || 'Series'}
-      </Text>
+      <View style={styles.titleRow}>
+        {series.set_icon_uri ? (
+          <SetSymbol uri={series.set_icon_uri} size={16} label={series.set_name} />
+        ) : null}
+        <Text variant="titleSmall" style={styles.title} numberOfLines={1}>
+          {series.name || series.set_name || rosterNames || 'Series'}
+        </Text>
+      </View>
       {series.name && rosterNames ? (
         <Text
           variant="bodySmall"
@@ -144,6 +150,8 @@ const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.bg },
   list: { padding: spacing.lg, gap: spacing.md, flexGrow: 1 },
   row: { gap: spacing.xs },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  title: { flexShrink: 1 },
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',

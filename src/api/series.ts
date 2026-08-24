@@ -36,11 +36,19 @@ export async function listSeriesPlayers(seriesId: string): Promise<SeriesPlayer[
   return (data ?? []) as SeriesPlayer[];
 }
 
+// The Magic set a series is played in, as the form holds it before saving.
+export interface SeriesSetInput {
+  code: string;
+  name: string;
+  iconUri: string | null;
+}
+
 interface CreateSeriesInput {
   podId: string;
   name: string;
   playerIds: string[];
   targetGames: number | null;
+  set: SeriesSetInput | null;
 }
 
 export async function createSeries(input: CreateSeriesInput): Promise<Series> {
@@ -50,6 +58,9 @@ export async function createSeries(input: CreateSeriesInput): Promise<Series> {
       pod_id: input.podId,
       name: input.name.trim() || null,
       target_games: input.targetGames,
+      set_code: input.set?.code ?? null,
+      set_name: input.set?.name ?? null,
+      set_icon_uri: input.set?.iconUri ?? null,
     })
     .select()
     .single();
@@ -68,6 +79,55 @@ export async function createSeries(input: CreateSeriesInput): Promise<Series> {
   }
 
   return series;
+}
+
+interface UpdateSeriesInput {
+  seriesId: string;
+  name: string;
+  playerIds: string[];
+  targetGames: number | null;
+  set: SeriesSetInput | null;
+}
+
+export async function updateSeries(input: UpdateSeriesInput): Promise<Series> {
+  const { data, error } = await supabase
+    .from('series')
+    .update({
+      name: input.name.trim() || null,
+      target_games: input.targetGames,
+      set_code: input.set?.code ?? null,
+      set_name: input.set?.name ?? null,
+      set_icon_uri: input.set?.iconUri ?? null,
+    })
+    .eq('id', input.seriesId)
+    .select()
+    .single();
+  if (error) throw error;
+
+  // Apply the roster as a diff so untouched rows keep their created_at (the
+  // roster's display order) and no game loses the player it points at.
+  const current = await listSeriesPlayers(input.seriesId);
+  const currentIds = new Set(current.map((r) => r.player_id));
+  const nextIds = new Set(input.playerIds);
+
+  const added = input.playerIds.filter((id) => !currentIds.has(id));
+  if (added.length > 0) {
+    const { error: addError } = await supabase
+      .from('series_players')
+      .insert(added.map((playerId) => ({ series_id: input.seriesId, player_id: playerId })));
+    if (addError) throw addError;
+  }
+
+  const removed = current.filter((r) => !nextIds.has(r.player_id)).map((r) => r.id);
+  if (removed.length > 0) {
+    const { error: removeError } = await supabase
+      .from('series_players')
+      .delete()
+      .in('id', removed);
+    if (removeError) throw removeError;
+  }
+
+  return data as Series;
 }
 
 export async function deleteSeries(seriesId: string): Promise<void> {
@@ -92,7 +152,7 @@ export async function listPodSeriesGames(
 ): Promise<SeriesGameWithSeries[]> {
   const { data, error } = await supabase
     .from('series_games')
-    .select('*, series!inner(name, pod_id)')
+    .select('*, series!inner(name, pod_id, set_code, set_name, set_icon_uri)')
     .eq('series.pod_id', podId)
     .order('played_at', { ascending: false })
     .order('created_at', { ascending: false });

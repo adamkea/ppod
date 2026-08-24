@@ -58,6 +58,8 @@ export function computeStandings(
 export interface SeriesFeedSummary {
   id: string;
   name: string | null;
+  setName: string | null;
+  setIconUri: string | null;
   playedAt: string; // date the series sits at in the feed (its latest game)
   createdAt: string; // tiebreak for ordering within a day
   gameCount: number;
@@ -95,6 +97,8 @@ export function summarizeSeriesForFeed(
     return {
       id: s.id,
       name: s.name,
+      setName: s.set_name,
+      setIconUri: s.set_icon_uri,
       playedAt,
       createdAt,
       gameCount: games.length,
