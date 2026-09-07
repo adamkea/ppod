@@ -12,6 +12,7 @@ import { useCommentCounts } from '@/hooks/useComments';
 import { useGames } from '@/hooks/useGames';
 import { usePlayers } from '@/hooks/usePlayers';
 import { usePod, useRenamePod } from '@/hooks/usePods';
+import { useSeasons } from '@/hooks/useSeasons';
 import { usePodSeriesGames, useSeriesList } from '@/hooks/useSeries';
 import { useCommanderArt } from '@/hooks/useCardArt';
 import { formatDateHeading } from '@/lib/dates';
@@ -32,6 +33,7 @@ export default function PodDetailScreen() {
   const pod = usePod(podId);
   const games = useGames(podId);
   const players = usePlayers(podId);
+  const seasons = useSeasons(podId);
   const seriesList = useSeriesList(podId);
   const seriesGames = usePodSeriesGames(podId);
   const renamePod = useRenamePod();
@@ -45,6 +47,12 @@ export default function PodDetailScreen() {
     for (const p of players.data ?? []) map.set(p.id, p.name);
     return map;
   }, [players.data]);
+
+  const seasonNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const s of seasons.data ?? []) map.set(s.id, s.name);
+    return map;
+  }, [seasons.data]);
 
   const [renaming, setRenaming] = useState(false);
   const [renameError, setRenameError] = useState<string | null>(null);
@@ -126,12 +134,14 @@ export default function PodDetailScreen() {
           refreshing={games.isRefetching || seriesGames.isRefetching || seriesList.isRefetching}
           onRefresh={() => {
             games.refetch();
+            seasons.refetch();
             seriesList.refetch();
             seriesGames.refetch();
           }}
           ListHeaderComponent={
             <PodHeader
               inviteCode={pod.data?.invite_code}
+              onSeasons={() => router.push(`/pod/${podId}/seasons`)}
               onPlayers={() => router.push(`/pod/${podId}/players`)}
             />
           }
@@ -154,6 +164,11 @@ export default function PodDetailScreen() {
             ) : (
               <GameCard
                 game={item.game}
+                seasonName={
+                  item.game.season_id
+                    ? seasonNameById.get(item.game.season_id) ?? null
+                    : null
+                }
                 canEdit={isOwner}
                 onPress={() =>
                   router.push({
@@ -211,9 +226,11 @@ export default function PodDetailScreen() {
 
 function PodHeader({
   inviteCode,
+  onSeasons,
   onPlayers,
 }: {
   inviteCode?: string;
+  onSeasons: () => void;
   onPlayers: () => void;
 }) {
   return (
@@ -225,7 +242,20 @@ function PodHeader({
             {inviteCode ?? ''}
           </Text>
         </View>
-        <Button label="Players" variant="secondary" onPress={onPlayers} />
+      </View>
+      <View style={styles.headerActions}>
+        <Button
+          label="Seasons"
+          variant="secondary"
+          onPress={onSeasons}
+          style={styles.headerAction}
+        />
+        <Button
+          label="Players"
+          variant="secondary"
+          onPress={onPlayers}
+          style={styles.headerAction}
+        />
       </View>
     </View>
   );
@@ -297,6 +327,7 @@ function CommanderCell({
 
 function GameCard({
   game,
+  seasonName,
   canEdit,
   onPress,
   commentsEnabled,
@@ -304,6 +335,8 @@ function GameCard({
   onComments,
 }: {
   game: GameWithPlayers;
+  // The season this game is filed under, if any.
+  seasonName: string | null;
   canEdit: boolean;
   onPress: () => void;
   commentsEnabled: boolean;
@@ -320,7 +353,16 @@ function GameCard({
 
   return (
     <Card onPress={canEdit ? onPress : undefined} style={styles.gameCard}>
-      <Text style={styles.gameType}>{game.game_type}</Text>
+      <View style={styles.gameTopRow}>
+        <Text style={styles.gameType}>{game.game_type}</Text>
+        {seasonName ? (
+          <View style={styles.seasonBadge}>
+            <Text style={styles.seasonBadgeText} numberOfLines={1}>
+              {seasonName}
+            </Text>
+          </View>
+        ) : null}
+      </View>
       {useGrid ? (
         <View style={gridStyles.grid}>
           {participants.map((gp) => (
@@ -458,6 +500,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   inviteText: { gap: 2 },
+  headerActions: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.md },
+  headerAction: { flex: 1 },
   inviteCode: {
     fontFamily: fonts.monoBold,
     letterSpacing: 3,
@@ -467,6 +511,27 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   gameCard: { gap: spacing.sm },
+  gameTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  seasonBadge: {
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    flexShrink: 1,
+  },
+  seasonBadgeText: {
+    fontFamily: fonts.mono,
+    fontSize: 10,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    color: colors.textMuted,
+  },
   gameType: {
     fontFamily: fonts.mono,
     fontSize: 11,

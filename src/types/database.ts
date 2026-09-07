@@ -35,7 +35,20 @@ export interface Game {
   played_at: string; // YYYY-MM-DD
   game_type: string;
   note: string | null;
+  // The season this game is filed under; null = not part of any season.
+  season_id: string | null;
   logged_by_user_id: string | null;
+  created_at: string;
+}
+
+// A named collection of the pod's games — "Summer 2026", "Foundations season".
+// Games join a season by being assigned to it when they're logged or edited,
+// not by falling inside a date range, so seasons can overlap and a game logged
+// late still lands where the pod says it belongs.
+export interface Season {
+  id: string;
+  pod_id: string;
+  name: string;
   created_at: string;
 }
 

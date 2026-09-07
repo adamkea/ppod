@@ -28,7 +28,8 @@ app/                     expo-router screens
   pod/[id]/index.tsx     pod detail — games grouped by date
   pod/[id]/add-game.tsx  log / edit a game (the core flow)
   pod/[id]/players.tsx   manage the pod's players
-  pod/[id]/stats.tsx     wins-per-player leaderboard
+  pod/[id]/stats.tsx     wins-per-player leaderboard (filterable by season)
+  pod/[id]/seasons/      seasons: the list, and one season's standings
 src/
   api/                   thin Supabase data functions
   hooks/                 TanStack Query hooks
@@ -57,6 +58,7 @@ The migrations:
 | `0001_initial_schema.sql` | The six tables: `pods`, `pod_members`, `players`, `games`, `game_players` (+ indexes). |
 | `0002_functions.sql` | Access-check helpers and the `create_pod` / `join_pod` / `log_game` / `update_game` RPCs that keep multi-row writes atomic. |
 | `0003_rls_policies.sql` | Row-level security: a row is visible/editable only to members of its pod; **owner-only delete** for pods and games. |
+| `0014_seasons.sql` | `seasons` + the `games.season_id` assignment, and `log_game` / `update_game` redefined to carry it. |
 
 ## App setup
 
@@ -111,6 +113,28 @@ Notes:
 - A **player** is just a name and doesn't need an account; the optional
   `user_id` link (for "see your own stats") is wired in the schema for later
   phases.
+
+## Seasons
+
+A **season** is a named collection of the pod's games — "Summer 2026", "the
+Foundations season" — so the pod can ask *who won the most this season?* without
+the answer being diluted by every game ever logged.
+
+- The owner creates seasons from **Pod → Seasons**.
+- Once a season exists, the log-game form grows a season picker. A new game
+  defaults to the newest season (the one the pod is presumably running) and can
+  be moved off it with the **No season** chip; editing a game can re-file it.
+- A season's screen shows its standings — the same wins-per-player table,
+  counted over that season's games alone — plus the games in it.
+- The stats screen gains **All time / ‹season›** chips for the same cut.
+
+Membership is explicit rather than date-derived: a game is in a season because
+someone put it there, so a game logged late still lands where the pod says it
+belongs, and two seasons can overlap. Deleting a season keeps its games and
+simply unfiles them.
+
+Seasons group the pod's normal games; a **series** (a separate feature) is its
+own 1 v 1 game log with its own tables and doesn't feed season standings.
 
 ## What's next (see `PLAN.md`)
 

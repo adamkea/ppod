@@ -20,6 +20,7 @@ import { useDeleteGame, useGame, useLogGame, useUpdateGame } from '@/hooks/useGa
 import { usePlayers } from '@/hooks/usePlayers';
 import { usePlayerCommanders } from '@/hooks/usePlayerCommanders';
 import { usePod } from '@/hooks/usePods';
+import { useSeasons } from '@/hooks/useSeasons';
 import { confirmAsync } from '@/lib/confirm';
 import { todayISO } from '@/lib/dates';
 import { useAuth } from '@/providers/AuthProvider';
@@ -60,6 +61,7 @@ export default function AddGameScreen() {
   const pod = usePod(podId);
   const players = usePlayers(podId);
   const existingGame = useGame(gameId ?? '');
+  const seasons = useSeasons(podId);
 
   const logGame = useLogGame(podId);
   const updateGame = useUpdateGame(podId, gameId ?? '');
@@ -70,6 +72,8 @@ export default function AddGameScreen() {
   const [playedAt, setPlayedAt] = useState(todayISO());
   const [gameType, setGameType] = useState('commander');
   const [note, setNote] = useState('');
+  // null = this game isn't part of a season.
+  const [seasonId, setSeasonId] = useState<string | null>(null);
   const [entries, setEntries] = useState<Record<string, Entry>>({});
   const [error, setError] = useState<string | null>(null);
 
@@ -78,6 +82,7 @@ export default function AddGameScreen() {
   useEffect(() => {
     if (initialized.current) return;
     if (!players.data) return;
+    if (!seasons.data) return;
     if (isEditing && !existingGame.data) return;
 
     const next: Record<string, Entry> = {};
@@ -89,6 +94,7 @@ export default function AddGameScreen() {
       setPlayedAt(existingGame.data.played_at);
       setGameType(existingGame.data.game_type);
       setNote(existingGame.data.note ?? '');
+      setSeasonId(existingGame.data.season_id);
       // Only the participants who were actually in the game start selected.
       for (const id of Object.keys(next)) next[id].selected = false;
       for (const gp of existingGame.data.game_players) {
@@ -102,11 +108,15 @@ export default function AddGameScreen() {
           partnerArtId: gp.partner_scryfall_id,
         };
       }
+    } else {
+      // A new game lands in the newest season by default — that's the one the
+      // pod is running — and can be moved off it with the "No season" chip.
+      setSeasonId(seasons.data[0]?.id ?? null);
     }
 
     setEntries(next);
     initialized.current = true;
-  }, [players.data, existingGame.data, isEditing]);
+  }, [players.data, seasons.data, existingGame.data, isEditing]);
 
   const orderedPlayers = useMemo(
     () => [...(players.data ?? [])].sort((a, b) => a.name.localeCompare(b.name)),
@@ -145,9 +155,21 @@ export default function AddGameScreen() {
     try {
       const noteText = note.trim();
       if (isEditing) {
-        await updateGame.mutateAsync({ playedAt, gameType, note: noteText, participants });
+        await updateGame.mutateAsync({
+          playedAt,
+          gameType,
+          note: noteText,
+          seasonId,
+          participants,
+        });
       } else {
-        await logGame.mutateAsync({ playedAt, gameType, note: noteText, participants });
+        await logGame.mutateAsync({
+          playedAt,
+          gameType,
+          note: noteText,
+          seasonId,
+          participants,
+        });
       }
       router.back();
     } catch (e) {
@@ -172,7 +194,11 @@ export default function AddGameScreen() {
     }
   }
 
-  const loading = pod.isLoading || players.isLoading || (isEditing && existingGame.isLoading);
+  const loading =
+    pod.isLoading ||
+    players.isLoading ||
+    seasons.isLoading ||
+    (isEditing && existingGame.isLoading);
   const saving = logGame.isPending || updateGame.isPending;
 
   if (loading) {
@@ -231,6 +257,35 @@ export default function AddGameScreen() {
             />
           </View>
         </View>
+
+        {/* Season — only pods that run seasons see this. */}
+        {(seasons.data ?? []).length > 0 ? (
+          <View style={styles.seasonArea}>
+            <SectionLabel>Season</SectionLabel>
+            <View style={styles.seasonChips}>
+              <Chip
+                mode={seasonId === null ? 'flat' : 'outlined'}
+                selected={seasonId === null}
+                showSelectedCheck={false}
+                onPress={() => setSeasonId(null)}
+              >
+                No season
+              </Chip>
+              {(seasons.data ?? []).map((season) => (
+                <Chip
+                  key={season.id}
+                  mode={seasonId === season.id ? 'flat' : 'outlined'}
+                  selected={seasonId === season.id}
+                  showSelectedCheck={false}
+                  onPress={() => setSeasonId(season.id)}
+                  style={styles.seasonChip}
+                >
+                  {season.name}
+                </Chip>
+              ))}
+            </View>
+          </View>
+        ) : null}
 
         <View style={styles.sectionRow}>
           <SectionLabel>Players</SectionLabel>
@@ -399,6 +454,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.textMuted,
   },
+  seasonArea: { gap: spacing.sm },
+  seasonChips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  seasonChip: { maxWidth: 220 },
   players: { gap: spacing.md },
   playerCard: { gap: spacing.md },
   playerHead: {
