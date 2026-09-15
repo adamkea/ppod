@@ -114,10 +114,14 @@ export function SeasonFormModal({
         style={[styles.backdrop, { backgroundColor: theme.colors.backdrop }]}
         onPress={onClose}
       >
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <Pressable onPress={(e) => e.stopPropagation()}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.keyboardArea}
+        >
+          <Pressable onPress={(e) => e.stopPropagation()} style={styles.sheetWrap}>
             <Surface mode="flat" elevation={3} style={styles.sheet}>
               <ScrollView
+                style={styles.scroll}
                 contentContainerStyle={styles.body}
                 keyboardShouldPersistTaps="handled"
               >
@@ -198,15 +202,23 @@ export function SeasonFormModal({
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, justifyContent: 'center', padding: spacing.lg },
+  backdrop: { flex: 1, padding: spacing.lg },
+  // The keyboard area owns the full height left by the backdrop's padding, so
+  // the cap below is a share of the screen rather than of the sheet's own
+  // content — a percentage measured against an auto-height parent clamps the
+  // sheet to a fraction of itself and makes even a short form scroll.
+  keyboardArea: { flex: 1, justifyContent: 'center' },
+  sheetWrap: { maxHeight: '100%' },
   sheet: {
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
-    // Tall on a small screen with the keyboard up, so the sheet scrolls
-    // instead of pushing its buttons off the bottom.
-    maxHeight: '90%',
+    // Sized by its content, shrinking only when the form genuinely outgrows
+    // the screen — with the keyboard up on a small phone, say.
+    flexShrink: 1,
+    overflow: 'hidden',
   },
+  scroll: { flexGrow: 0, flexShrink: 1 },
   body: { padding: spacing.lg, gap: spacing.md },
   formatArea: { gap: spacing.sm },
   formatChips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
