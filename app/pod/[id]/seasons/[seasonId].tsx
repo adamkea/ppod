@@ -79,6 +79,22 @@ export default function SeasonDetailScreen() {
     return <View style={styles.flex}><Loading label="Loading season…" /></View>;
   }
 
+  if (pod.data && !pod.data.seasons_enabled) {
+    return (
+      <View style={styles.flex}>
+        <Stack.Screen options={{ title: 'Season' }} />
+        <EmptyState
+          title="Seasons are off"
+          subtitle={
+            isOwner
+              ? 'Turn seasons on in pod settings to see this season’s standings.'
+              : 'The pod owner has seasons turned off.'
+          }
+        />
+      </View>
+    );
+  }
+
   if (season.isError || !season.data) {
     return (
       <View style={styles.flex}>

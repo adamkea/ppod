@@ -33,7 +33,8 @@ export default function PodDetailScreen() {
   const pod = usePod(podId);
   const games = useGames(podId);
   const players = usePlayers(podId);
-  const seasons = useSeasons(podId);
+  const seasonsEnabled = pod.data?.seasons_enabled ?? false;
+  const seasons = useSeasons(podId, seasonsEnabled);
   const seriesList = useSeriesList(podId);
   const seriesGames = usePodSeriesGames(podId);
   const renamePod = useRenamePod();
@@ -141,7 +142,9 @@ export default function PodDetailScreen() {
           ListHeaderComponent={
             <PodHeader
               inviteCode={pod.data?.invite_code}
-              onSeasons={() => router.push(`/pod/${podId}/seasons`)}
+              onSeasons={
+                seasonsEnabled ? () => router.push(`/pod/${podId}/seasons`) : undefined
+              }
               onPlayers={() => router.push(`/pod/${podId}/players`)}
             />
           }
@@ -165,7 +168,9 @@ export default function PodDetailScreen() {
               <GameCard
                 game={item.game}
                 seasonName={
-                  item.game.season_id
+                  // Seasons off: the game shows as an ordinary game, even
+                  // though it keeps the season it was filed under.
+                  seasonsEnabled && item.game.season_id
                     ? seasonNameById.get(item.game.season_id) ?? null
                     : null
                 }
@@ -230,7 +235,8 @@ function PodHeader({
   onPlayers,
 }: {
   inviteCode?: string;
-  onSeasons: () => void;
+  // Absent while the pod has seasons turned off.
+  onSeasons?: () => void;
   onPlayers: () => void;
 }) {
   return (
@@ -244,18 +250,10 @@ function PodHeader({
         </View>
       </View>
       <View style={styles.headerActions}>
-        <Button
-          label="Seasons"
-          variant="secondary"
-          onPress={onSeasons}
-          style={styles.headerAction}
-        />
-        <Button
-          label="Players"
-          variant="secondary"
-          onPress={onPlayers}
-          style={styles.headerAction}
-        />
+        {onSeasons ? (
+          <Button label="Seasons" variant="secondary" onPress={onSeasons} />
+        ) : null}
+        <Button label="Players" variant="secondary" onPress={onPlayers} />
       </View>
     </View>
   );
@@ -500,8 +498,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   inviteText: { gap: 2 },
-  headerActions: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.md },
-  headerAction: { flex: 1 },
+  headerActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: spacing.md,
+    marginTop: spacing.md,
+  },
   inviteCode: {
     fontFamily: fonts.monoBold,
     letterSpacing: 3,

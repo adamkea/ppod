@@ -10,6 +10,9 @@ export interface Pod {
   invite_code: string;
   // Owner-controlled toggle: when true, members can comment on games.
   comments_enabled: boolean;
+  // Owner-controlled toggle: when true, the pod files games into seasons.
+  // Off hides the feature without discarding any game's season assignment.
+  seasons_enabled: boolean;
   created_at: string;
 }
 

@@ -52,6 +52,19 @@ export async function setPodCommentsEnabled(
   if (error) throw error;
 }
 
+export async function setPodSeasonsEnabled(
+  podId: string,
+  enabled: boolean,
+): Promise<void> {
+  // Owner-only at the RLS layer. Games keep their season_id either way — off
+  // just stops the app (and log_game) from using it.
+  const { error } = await supabase
+    .from('pods')
+    .update({ seasons_enabled: enabled })
+    .eq('id', podId);
+  if (error) throw error;
+}
+
 export async function deletePod(podId: string): Promise<void> {
   // Owner-only at the RLS layer.
   const { error } = await supabase.from('pods').delete().eq('id', podId);

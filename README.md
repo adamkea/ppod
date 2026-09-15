@@ -59,6 +59,7 @@ The migrations:
 | `0002_functions.sql` | Access-check helpers and the `create_pod` / `join_pod` / `log_game` / `update_game` RPCs that keep multi-row writes atomic. |
 | `0003_rls_policies.sql` | Row-level security: a row is visible/editable only to members of its pod; **owner-only delete** for pods and games. |
 | `0014_seasons.sql` | `seasons` + the `games.season_id` assignment, and `log_game` / `update_game` redefined to carry it. |
+| `0015_pod_seasons_enabled.sql` | `pods.seasons_enabled` — seasons become opt-in per pod; the RPCs honour the setting. |
 
 ## App setup
 
@@ -120,6 +121,9 @@ A **season** is a named collection of the pod's games — "Summer 2026", "the
 Foundations season" — so the pod can ask *who won the most this season?* without
 the answer being diluted by every game ever logged.
 
+Seasons are **off by default**. The owner turns them on in **Pod → Settings →
+Seasons**; until then nothing about the feature appears anywhere.
+
 - The owner creates seasons from **Pod → Seasons**.
 - Once a season exists, the log-game form grows a season picker. A new game
   defaults to the newest season (the one the pod is presumably running) and can
@@ -127,6 +131,16 @@ the answer being diluted by every game ever logged.
 - A season's screen shows its standings — the same wins-per-player table,
   counted over that season's games alone — plus the games in it.
 - The stats screen gains **All time / ‹season›** chips for the same cut.
+
+A season's games are ordinary games: they sit in the pod's main log alongside
+everything else, just carrying a season badge. A season is a lens on the log,
+not a separate one.
+
+Turning the setting back **off** hides the feature without erasing it. Games
+keep the `season_id` they were filed under and show as ordinary games with no
+season context; `log_game` won't file a new game into a season while it's off,
+and `update_game` leaves an existing assignment alone rather than clearing it —
+so flipping seasons back on restores every standing intact.
 
 Membership is explicit rather than date-derived: a game is in a season because
 someone put it there, so a game logged late still lands where the pod says it

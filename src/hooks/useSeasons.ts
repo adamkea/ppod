@@ -3,12 +3,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as seasonsApi from '@/api/seasons';
 import { queryKeys } from './queryKeys';
 
-/** The pod's seasons, newest first. */
-export function useSeasons(podId: string) {
+/** The pod's seasons, newest first. Skipped while seasons are off. */
+export function useSeasons(podId: string, enabled = true) {
   return useQuery({
     queryKey: queryKeys.seasons(podId),
     queryFn: () => seasonsApi.listSeasons(podId),
-    enabled: !!podId,
+    enabled: !!podId && enabled,
   });
 }
 

@@ -24,7 +24,8 @@ export default function SeasonsListScreen() {
   const { session } = useAuth();
 
   const pod = usePod(podId);
-  const seasons = useSeasons(podId);
+  const seasonsEnabled = pod.data?.seasons_enabled ?? false;
+  const seasons = useSeasons(podId, seasonsEnabled);
   const games = useGames(podId);
   const players = usePlayers(podId);
   const createSeason = useCreateSeason(podId);
@@ -48,6 +49,23 @@ export default function SeasonsListScreen() {
     } catch (e) {
       setCreateError(e instanceof Error ? e.message : 'Could not create the season.');
     }
+  }
+
+  // Reachable by a stale link after the owner turns seasons off.
+  if (pod.data && !seasonsEnabled) {
+    return (
+      <View style={styles.flex}>
+        <Stack.Screen options={{ title: 'Seasons' }} />
+        <EmptyState
+          title="Seasons are off"
+          subtitle={
+            isOwner
+              ? 'Turn seasons on in pod settings to file games into them.'
+              : 'The pod owner has seasons turned off.'
+          }
+        />
+      </View>
+    );
   }
 
   return (

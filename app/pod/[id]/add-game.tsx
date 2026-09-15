@@ -61,7 +61,8 @@ export default function AddGameScreen() {
   const pod = usePod(podId);
   const players = usePlayers(podId);
   const existingGame = useGame(gameId ?? '');
-  const seasons = useSeasons(podId);
+  const seasonsEnabled = pod.data?.seasons_enabled ?? false;
+  const seasons = useSeasons(podId, seasonsEnabled);
 
   const logGame = useLogGame(podId);
   const updateGame = useUpdateGame(podId, gameId ?? '');
@@ -81,8 +82,11 @@ export default function AddGameScreen() {
   const initialized = useRef(false);
   useEffect(() => {
     if (initialized.current) return;
+    if (!pod.data) return;
     if (!players.data) return;
-    if (!seasons.data) return;
+    // Only wait on seasons when the pod actually uses them — the query is
+    // disabled otherwise, so its data never arrives.
+    if (seasonsEnabled && !seasons.data) return;
     if (isEditing && !existingGame.data) return;
 
     const next: Record<string, Entry> = {};
@@ -108,15 +112,15 @@ export default function AddGameScreen() {
           partnerArtId: gp.partner_scryfall_id,
         };
       }
-    } else {
+    } else if (seasonsEnabled) {
       // A new game lands in the newest season by default — that's the one the
       // pod is running — and can be moved off it with the "No season" chip.
-      setSeasonId(seasons.data[0]?.id ?? null);
+      setSeasonId(seasons.data?.[0]?.id ?? null);
     }
 
     setEntries(next);
     initialized.current = true;
-  }, [players.data, seasons.data, existingGame.data, isEditing]);
+  }, [pod.data, players.data, seasons.data, seasonsEnabled, existingGame.data, isEditing]);
 
   const orderedPlayers = useMemo(
     () => [...(players.data ?? [])].sort((a, b) => a.name.localeCompare(b.name)),
@@ -258,8 +262,8 @@ export default function AddGameScreen() {
           </View>
         </View>
 
-        {/* Season — only pods that run seasons see this. */}
-        {(seasons.data ?? []).length > 0 ? (
+        {/* Season — only pods with the setting on, and a season to pick. */}
+        {seasonsEnabled && (seasons.data ?? []).length > 0 ? (
           <View style={styles.seasonArea}>
             <SectionLabel>Season</SectionLabel>
             <View style={styles.seasonChips}>
