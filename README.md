@@ -60,6 +60,7 @@ The migrations:
 | `0003_rls_policies.sql` | Row-level security: a row is visible/editable only to members of its pod; **owner-only delete** for pods and games. |
 | `0014_seasons.sql` | `seasons` + the `games.season_id` assignment, and `log_game` / `update_game` redefined to carry it. |
 | `0015_pod_seasons_enabled.sql` | `pods.seasons_enabled` — seasons become opt-in per pod; the RPCs honour the setting. |
+| `0016_season_formats.sql` | `seasons.format` / `seasons.target` — open-ended, first-to-X, or best-of-X — plus `season_is_decided()`, which closes a finished season to new games. |
 
 ## App setup
 
@@ -124,13 +125,39 @@ the answer being diluted by every game ever logged.
 Seasons are **off by default**. The owner turns them on in **Pod → Settings →
 Seasons**; until then nothing about the feature appears anywhere.
 
-- The owner creates seasons from **Pod → Seasons**.
+- The owner creates seasons from **Pod → Seasons**, choosing how each one ends
+  (see below).
 - Once a season exists, the log-game form grows a season picker. A new game
-  defaults to the newest season (the one the pod is presumably running) and can
-  be moved off it with the **No season** chip; editing a game can re-file it.
+  defaults to the newest season still running and can be moved off it with the
+  **No season** chip; editing a game can re-file it.
 - A season's screen shows its standings — the same wins-per-player table,
-  counted over that season's games alone — plus the games in it.
+  counted over that season's games alone — plus the games in it, how far along
+  it is, and who has won it.
 - The stats screen gains **All time / ‹season›** chips for the same cut.
+
+### How a season ends
+
+| Format | Ends when |
+|--------|-----------|
+| **Open-ended** (default) | Never. Log as many games into it as you like. |
+| **First to X wins** | A player reaches X wins. |
+| **Best of X games** | X games have been played and one player leads — or earlier, once the leader can no longer be caught by the games left, the same way a best-of-seven stops at 4–0. |
+
+If a season with a finish line reaches it with the top of the table **level**,
+nobody has won: it goes to **sudden death** and keeps accepting games past its
+target until one player leads outright. That's the honest answer in a pod, where
+"most wins" between three or four players ties far more often than a 1v1 match
+does.
+
+A decided season is **closed**: `log_game` and `update_game` reject a game filed
+into one, so a finished season can't quietly keep growing. Its own games stay
+editable — correcting a mis-recorded winner re-decides the season, and may hand
+it to someone else. To play on regardless, the owner raises the target from
+**Edit season**, which reopens it.
+
+None of this is stored: a season's state is derived from its games, in
+`src/lib/seasons.ts` for display and in `season_is_decided()` for enforcement,
+so the two can't drift into disagreeing about who won.
 
 A season's games are ordinary games: they sit in the pod's main log alongside
 everything else, just carrying a season badge. A season is a lens on the log,

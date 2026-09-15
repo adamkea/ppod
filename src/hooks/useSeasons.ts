@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import * as seasonsApi from '@/api/seasons';
+import type { SeasonInput } from '@/api/seasons';
 import { queryKeys } from './queryKeys';
 
 /** The pod's seasons, newest first. Skipped while seasons are off. */
@@ -23,16 +24,16 @@ export function useSeason(seasonId: string) {
 export function useCreateSeason(podId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (name: string) => seasonsApi.createSeason(podId, name),
+    mutationFn: (input: SeasonInput) => seasonsApi.createSeason(podId, input),
     onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.seasons(podId) }),
   });
 }
 
-export function useRenameSeason(podId: string) {
+export function useUpdateSeason(podId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ seasonId, name }: { seasonId: string; name: string }) =>
-      seasonsApi.renameSeason(seasonId, name),
+    mutationFn: ({ seasonId, input }: { seasonId: string; input: SeasonInput }) =>
+      seasonsApi.updateSeason(seasonId, input),
     onSuccess: (_data, { seasonId }) => {
       qc.invalidateQueries({ queryKey: queryKeys.seasons(podId) });
       qc.invalidateQueries({ queryKey: queryKeys.season(seasonId) });
