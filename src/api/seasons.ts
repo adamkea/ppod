@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import type { Season } from '@/types/database';
+import type { Season, SeasonFormat } from '@/types/database';
 
 export async function listSeasons(podId: string): Promise<Season[]> {
   const { data, error } = await supabase
@@ -21,20 +21,39 @@ export async function getSeason(seasonId: string): Promise<Season> {
   return data as Season;
 }
 
-export async function createSeason(podId: string, name: string): Promise<Season> {
+// The name and format fields a season is created or edited with. `target` is
+// ignored for an open season — the database rejects a target on one.
+export interface SeasonInput {
+  name: string;
+  format: SeasonFormat;
+  target: number | null;
+}
+
+function toRow(input: SeasonInput) {
+  return {
+    name: input.name.trim(),
+    format: input.format,
+    target: input.format === 'open' ? null : input.target,
+  };
+}
+
+export async function createSeason(podId: string, input: SeasonInput): Promise<Season> {
   const { data, error } = await supabase
     .from('seasons')
-    .insert({ pod_id: podId, name: name.trim() })
+    .insert({ pod_id: podId, ...toRow(input) })
     .select()
     .single();
   if (error) throw error;
   return data as Season;
 }
 
-export async function renameSeason(seasonId: string, name: string): Promise<void> {
+// Owner-only at the RLS layer. Changing the format re-derives the season's
+// state from the games it already holds: raising a target can reopen a season
+// that had been decided, which is how a pod keeps playing past a finish line.
+export async function updateSeason(seasonId: string, input: SeasonInput): Promise<void> {
   const { error } = await supabase
     .from('seasons')
-    .update({ name: name.trim() })
+    .update(toRow(input))
     .eq('id', seasonId);
   if (error) throw error;
 }

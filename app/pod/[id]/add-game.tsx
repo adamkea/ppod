@@ -16,13 +16,20 @@ import { CommanderSearch } from '@/components/CommanderSearch';
 import { DateField } from '@/components/DateField';
 import { TextField } from '@/components/TextField';
 import { Card, EmptyState, Loading, SectionLabel } from '@/components/ui';
-import { useDeleteGame, useGame, useLogGame, useUpdateGame } from '@/hooks/useGames';
+import {
+  useDeleteGame,
+  useGame,
+  useGames,
+  useLogGame,
+  useUpdateGame,
+} from '@/hooks/useGames';
 import { usePlayers } from '@/hooks/usePlayers';
 import { usePlayerCommanders } from '@/hooks/usePlayerCommanders';
 import { usePod } from '@/hooks/usePods';
 import { useSeasons } from '@/hooks/useSeasons';
 import { confirmAsync } from '@/lib/confirm';
 import { todayISO } from '@/lib/dates';
+import { assignableSeasons, computeSeasonProgress } from '@/lib/seasons';
 import { useAuth } from '@/providers/AuthProvider';
 import { commanderLabel } from '@/lib/stats';
 import { colors, fonts, spacing } from '@/theme';
@@ -63,6 +70,9 @@ export default function AddGameScreen() {
   const existingGame = useGame(gameId ?? '');
   const seasonsEnabled = pod.data?.seasons_enabled ?? false;
   const seasons = useSeasons(podId, seasonsEnabled);
+  // The pod's whole log — what a season's standings, and so whether it has
+  // been decided, are worked out from. Only needed while seasons are on.
+  const podGames = useGames(podId, seasonsEnabled);
 
   const logGame = useLogGame(podId);
   const updateGame = useUpdateGame(podId, gameId ?? '');
@@ -85,8 +95,10 @@ export default function AddGameScreen() {
     if (!pod.data) return;
     if (!players.data) return;
     // Only wait on seasons when the pod actually uses them — the query is
-    // disabled otherwise, so its data never arrives.
-    if (seasonsEnabled && !seasons.data) return;
+    // disabled otherwise, so its data never arrives. The log comes with them,
+    // since which season a new game defaults to depends on which are still
+    // running.
+    if (seasonsEnabled && (!seasons.data || !podGames.data)) return;
     if (isEditing && !existingGame.data) return;
 
     const next: Record<string, Entry> = {};
@@ -113,19 +125,61 @@ export default function AddGameScreen() {
         };
       }
     } else if (seasonsEnabled) {
-      // A new game lands in the newest season by default — that's the one the
-      // pod is running — and can be moved off it with the "No season" chip.
-      setSeasonId(seasons.data?.[0]?.id ?? null);
+      // A new game lands in the newest season still running — that's the one
+      // the pod is playing — and can be moved off it with the "No season"
+      // chip. A season that already has a champion is skipped: it's closed,
+      // and the database would reject the game anyway.
+      const open = assignableSeasons(
+        seasons.data ?? [],
+        podGames.data ?? [],
+        players.data ?? [],
+        null,
+      );
+      setSeasonId(open[0]?.id ?? null);
     }
 
     setEntries(next);
     initialized.current = true;
-  }, [pod.data, players.data, seasons.data, seasonsEnabled, existingGame.data, isEditing]);
+  }, [
+    pod.data,
+    players.data,
+    seasons.data,
+    podGames.data,
+    seasonsEnabled,
+    existingGame.data,
+    isEditing,
+  ]);
 
   const orderedPlayers = useMemo(
     () => [...(players.data ?? [])].sort((a, b) => a.name.localeCompare(b.name)),
     [players.data],
   );
+
+  // The season this game is already filed under stays pickable even once it's
+  // decided, so editing an old game can't quietly unfile it.
+  const filedSeasonId = isEditing ? existingGame.data?.season_id ?? null : null;
+
+  const seasonChoices = useMemo(
+    () =>
+      assignableSeasons(
+        seasons.data ?? [],
+        podGames.data ?? [],
+        players.data ?? [],
+        filedSeasonId,
+      ),
+    [seasons.data, podGames.data, players.data, filedSeasonId],
+  );
+
+  // Only ever the game's own season, by the filter above — shown with a trophy
+  // so it's clear why a finished season is still on the list.
+  const decidedSeasonIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const season of seasonChoices) {
+      const progress = computeSeasonProgress(season, podGames.data ?? [], players.data ?? []);
+      if (progress.status === 'decided') ids.add(season.id);
+    }
+    return ids;
+  }, [seasonChoices, podGames.data, players.data]);
 
   const selectedCount = Object.values(entries).filter((e) => e.selected).length;
 
@@ -202,6 +256,8 @@ export default function AddGameScreen() {
     pod.isLoading ||
     players.isLoading ||
     seasons.isLoading ||
+    // Seasons off: the log isn't needed to build the form, so don't wait on it.
+    (seasonsEnabled && podGames.isLoading) ||
     (isEditing && existingGame.isLoading);
   const saving = logGame.isPending || updateGame.isPending;
 
@@ -275,12 +331,13 @@ export default function AddGameScreen() {
               >
                 No season
               </Chip>
-              {(seasons.data ?? []).map((season) => (
+              {seasonChoices.map((season) => (
                 <Chip
                   key={season.id}
                   mode={seasonId === season.id ? 'flat' : 'outlined'}
                   selected={seasonId === season.id}
                   showSelectedCheck={false}
+                  icon={decidedSeasonIds.has(season.id) ? 'trophy' : undefined}
                   onPress={() => setSeasonId(season.id)}
                   style={styles.seasonChip}
                 >
@@ -288,6 +345,25 @@ export default function AddGameScreen() {
                 </Chip>
               ))}
             </View>
+            {seasonChoices.length === 0 ? (
+              // Every season the pod has started is finished, so there is
+              // nothing to file this game into.
+              <Text
+                variant="bodySmall"
+                style={{ color: theme.colors.onSurfaceVariant }}
+              >
+                Every season has been won. Start a new one from Pod → Seasons to
+                file games into it.
+              </Text>
+            ) : seasonId && decidedSeasonIds.has(seasonId) ? (
+              <Text
+                variant="bodySmall"
+                style={{ color: theme.colors.onSurfaceVariant }}
+              >
+                This season has been won, so it’s closed to new games — it stays
+                here only to keep this one filed under it.
+              </Text>
+            ) : null}
           </View>
         ) : null}
 

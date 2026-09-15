@@ -4,11 +4,14 @@ import * as gamesApi from '@/api/games';
 import type { ParticipantInput } from '@/types/database';
 import { queryKeys } from './queryKeys';
 
-export function useGames(podId: string) {
+/** The pod's games, newest first. `enabled` is for screens that only need the
+ * log under some condition — the add-game form, which reads it to work out
+ * which seasons are still running. */
+export function useGames(podId: string, enabled = true) {
   return useQuery({
     queryKey: queryKeys.games(podId),
     queryFn: () => gamesApi.listGames(podId),
-    enabled: !!podId,
+    enabled: !!podId && enabled,
   });
 }
 

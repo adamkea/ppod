@@ -4,17 +4,23 @@ import { FlatList, StyleSheet, View } from 'react-native';
 import { Icon, Text, useTheme } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import type { SeasonInput } from '@/api/seasons';
 import { Button } from '@/components/Button';
-import { PromptModal } from '@/components/PromptModal';
+import { SeasonFormModal } from '@/components/SeasonFormModal';
 import { Card, EmptyState, ErrorState, Loading } from '@/components/ui';
 import { useGames } from '@/hooks/useGames';
 import { usePlayers } from '@/hooks/usePlayers';
 import { usePod } from '@/hooks/usePods';
 import { useCreateSeason, useSeasons } from '@/hooks/useSeasons';
 import { formatDateHeading } from '@/lib/dates';
-import { summarizeSeasons, type SeasonSummary } from '@/lib/seasons';
+import {
+  seasonFormatBadge,
+  seasonProgressLabel,
+  summarizeSeasons,
+  type SeasonSummary,
+} from '@/lib/seasons';
 import { useAuth } from '@/providers/AuthProvider';
-import { colors, fonts, spacing } from '@/theme';
+import { colors, fonts, radius, spacing } from '@/theme';
 
 export default function SeasonsListScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -40,10 +46,10 @@ export default function SeasonsListScreen() {
     [seasons.data, games.data, players.data],
   );
 
-  async function handleCreate(name: string) {
+  async function handleCreate(input: SeasonInput) {
     setCreateError(null);
     try {
-      const season = await createSeason.mutateAsync(name);
+      const season = await createSeason.mutateAsync(input);
       setCreating(false);
       router.push(`/pod/${podId}/seasons/${season.id}`);
     } catch (e) {
@@ -105,11 +111,9 @@ export default function SeasonsListScreen() {
         />
       )}
 
-      <PromptModal
+      <SeasonFormModal
         visible={creating}
         title="New season"
-        label="Season name"
-        placeholder="e.g. Summer 2026"
         submitLabel="Create"
         submitting={createSeason.isPending}
         error={createError}
@@ -137,13 +141,22 @@ function SeasonRow({
   onPress: () => void;
 }) {
   const theme = useTheme();
-  const { season, gameCount, lastPlayedAt, leader } = summary;
+  const { season, gameCount, lastPlayedAt, leader, progress } = summary;
+  const decided = progress.status === 'decided';
 
   return (
     <Card onPress={onPress} style={styles.row}>
-      <Text variant="titleSmall" numberOfLines={1}>
-        {season.name}
-      </Text>
+      <View style={styles.titleRow}>
+        <Text variant="titleSmall" style={styles.name} numberOfLines={1}>
+          {season.name}
+        </Text>
+        {season.format !== 'open' ? (
+          <Text style={[styles.badge, decided && styles.badgeDecided]}>
+            {seasonFormatBadge(season)}
+          </Text>
+        ) : null}
+      </View>
+
       <View style={styles.metaRow}>
         <Text
           variant="bodySmall"
@@ -155,13 +168,33 @@ function SeasonRow({
         </Text>
         {leader ? (
           <View style={styles.leaderRow}>
-            <Icon source="crown" size={13} color={colors.winner} />
+            <Icon source={decided ? 'trophy' : 'crown'} size={13} color={colors.winner} />
             <Text variant="labelMedium" style={styles.leader} numberOfLines={1}>
               {leader.name} ({leader.wins})
             </Text>
           </View>
         ) : null}
       </View>
+
+      {/* An open-ended season has no finish line to report progress against. */}
+      {season.format !== 'open' ? (
+        <Text
+          variant="bodySmall"
+          style={[
+            styles.progress,
+            decided
+              ? styles.progressDecided
+              : progress.status === 'tiebreaker'
+                ? styles.progressTiebreaker
+                : { color: theme.colors.onSurfaceVariant },
+          ]}
+          numberOfLines={1}
+        >
+          {decided && progress.champion
+            ? `Won by ${progress.champion.name}`
+            : seasonProgressLabel(season, progress)}
+        </Text>
+      ) : null}
     </Card>
   );
 }
@@ -170,6 +203,30 @@ const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.bg },
   list: { padding: spacing.lg, gap: spacing.md, flexGrow: 1 },
   row: { gap: spacing.xs },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  name: { flexShrink: 1 },
+  badge: {
+    fontFamily: fonts.mono,
+    fontSize: 10,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    color: colors.textMuted,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    overflow: 'hidden',
+  },
+  badgeDecided: { color: colors.winner, borderColor: colors.winner },
+  progress: { fontFamily: fonts.regular },
+  progressDecided: { color: colors.winner },
+  progressTiebreaker: { color: colors.success },
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',

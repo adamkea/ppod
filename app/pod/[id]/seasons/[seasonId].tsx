@@ -4,21 +4,28 @@ import { FlatList, StyleSheet, View } from 'react-native';
 import { Icon, Text, useTheme } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import type { SeasonInput } from '@/api/seasons';
 import { Button } from '@/components/Button';
-import { PromptModal } from '@/components/PromptModal';
+import { SeasonFormModal } from '@/components/SeasonFormModal';
 import { StatRow } from '@/components/StatRow';
 import { Card, EmptyState, ErrorState, Loading, SectionLabel } from '@/components/ui';
 import { useGames } from '@/hooks/useGames';
+import { usePlayers } from '@/hooks/usePlayers';
 import { usePod } from '@/hooks/usePods';
-import { useDeleteSeason, useRenameSeason, useSeason } from '@/hooks/useSeasons';
-import { usePlayerStats } from '@/hooks/useStats';
+import { useDeleteSeason, useSeason, useUpdateSeason } from '@/hooks/useSeasons';
 import { confirmAsync } from '@/lib/confirm';
 import { formatDateHeading } from '@/lib/dates';
-import { gamesInSeason } from '@/lib/seasons';
+import {
+  computeSeasonProgress,
+  gamesInSeason,
+  seasonFormatLabel,
+  seasonProgressLabel,
+  type SeasonProgress,
+} from '@/lib/seasons';
 import { commanderLabel } from '@/lib/stats';
 import { useAuth } from '@/providers/AuthProvider';
 import { colors, fonts, spacing } from '@/theme';
-import type { GameWithPlayers } from '@/types/database';
+import type { GameWithPlayers, Season } from '@/types/database';
 
 export default function SeasonDetailScreen() {
   const { id, seasonId } = useLocalSearchParams<{ id: string; seasonId: string }>();
@@ -31,30 +38,41 @@ export default function SeasonDetailScreen() {
   const pod = usePod(podId);
   const season = useSeason(seasonId!);
   const games = useGames(podId);
-  const { stats } = usePlayerStats(podId, seasonId);
+  const players = usePlayers(podId);
 
-  const renameSeason = useRenameSeason(podId);
+  const updateSeason = useUpdateSeason(podId);
   const deleteSeason = useDeleteSeason(podId);
 
   const isOwner = pod.data?.owner_id === session?.user.id;
 
-  const [renaming, setRenaming] = useState(false);
-  const [renameError, setRenameError] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
 
   const seasonGames = useMemo(
     () => gamesInSeason(games.data ?? [], seasonId!),
     [games.data, seasonId],
   );
 
+  // The season's standings and whether it has been won, derived from its games
+  // — the same rule the database enforces when a game is filed into a season.
+  const progress: SeasonProgress | null = useMemo(
+    () =>
+      season.data
+        ? computeSeasonProgress(season.data, games.data ?? [], players.data ?? [])
+        : null,
+    [season.data, games.data, players.data],
+  );
+  const stats = progress?.standings ?? [];
+
   const totalWins = stats.reduce((sum, s) => sum + s.wins, 0);
 
-  async function handleRename(name: string) {
-    setRenameError(null);
+  async function handleEdit(input: SeasonInput) {
+    setEditError(null);
     try {
-      await renameSeason.mutateAsync({ seasonId: seasonId!, name });
-      setRenaming(false);
+      await updateSeason.mutateAsync({ seasonId: seasonId!, input });
+      setEditing(false);
     } catch (e) {
-      setRenameError(e instanceof Error ? e.message : 'Could not rename the season.');
+      setEditError(e instanceof Error ? e.message : 'Could not save the season.');
     }
   }
 
@@ -124,6 +142,9 @@ export default function SeasonDetailScreen() {
                 {seasonGames.length} game{seasonGames.length === 1 ? '' : 's'} in this
                 season{totalWins > 0 ? `, ${totalWins} win${totalWins === 1 ? '' : 's'} recorded` : ''}
               </Text>
+              {progress ? (
+                <SeasonFormatLine season={season.data} progress={progress} />
+              ) : null}
             </Card>
 
             {stats.length > 0 ? (
@@ -165,9 +186,9 @@ export default function SeasonDetailScreen() {
           isOwner ? (
             <View style={styles.footerArea}>
               <Button
-                label="Rename season"
+                label="Edit season"
                 variant="secondary"
-                onPress={() => setRenaming(true)}
+                onPress={() => setEditing(true)}
               />
               <Button label="Delete season" variant="danger" onPress={confirmDelete} />
             </View>
@@ -175,23 +196,78 @@ export default function SeasonDetailScreen() {
         }
       />
 
-      <PromptModal
-        visible={renaming}
-        title="Rename season"
-        label="Season name"
-        placeholder="Season name"
-        initialValue={season.data.name}
+      <SeasonFormModal
+        visible={editing}
+        title="Edit season"
+        initial={{
+          name: season.data.name,
+          format: season.data.format,
+          target: season.data.target,
+        }}
         submitLabel="Save"
-        submitting={renameSeason.isPending}
-        error={renameError}
-        onSubmit={handleRename}
+        submitting={updateSeason.isPending}
+        error={editError}
+        onSubmit={handleEdit}
         onClose={() => {
-          setRenaming(false);
-          setRenameError(null);
+          setEditing(false);
+          setEditError(null);
         }}
       />
 
       <View style={{ paddingBottom: insets.bottom }} />
+    </View>
+  );
+}
+
+// How the season ends, how far along it is, and who has taken it. An
+// open-ended season has no finish line, so it just says so.
+function SeasonFormatLine({
+  season,
+  progress,
+}: {
+  season: Season;
+  progress: SeasonProgress;
+}) {
+  const theme = useTheme();
+  const mutedColor = { color: theme.colors.onSurfaceVariant };
+
+  if (season.format === 'open') {
+    return (
+      <Text variant="bodySmall" style={mutedColor}>
+        Open-ended — log as many games into it as you like.
+      </Text>
+    );
+  }
+
+  const decided = progress.status === 'decided';
+
+  return (
+    <View style={styles.formatArea}>
+      <Text variant="bodySmall" style={mutedColor}>
+        {seasonFormatLabel(season)} · {seasonProgressLabel(season, progress)}
+      </Text>
+
+      {decided && progress.champion ? (
+        <>
+          <View style={styles.verdictRow}>
+            <Icon source="trophy" size={16} color={colors.winner} />
+            <Text variant="titleSmall" style={styles.champion} numberOfLines={2}>
+              {progress.champion.name} wins the season
+            </Text>
+          </View>
+          <Text variant="bodySmall" style={mutedColor}>
+            It’s closed to new games — the pod owner can raise the target if
+            you want to play on.
+          </Text>
+        </>
+      ) : progress.status === 'tiebreaker' ? (
+        <View style={styles.verdictRow}>
+          <Icon source="sword-cross" size={16} color={colors.success} />
+          <Text variant="bodySmall" style={styles.tiebreaker}>
+            Keep playing — the next player to lead outright takes the season.
+          </Text>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -250,6 +326,10 @@ const styles = StyleSheet.create({
   list: { padding: spacing.lg, gap: spacing.md, flexGrow: 1 },
   headerArea: { gap: spacing.md },
   card: { gap: spacing.xs },
+  formatArea: { gap: spacing.xs, marginTop: spacing.xs },
+  verdictRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  champion: { color: colors.winner, flexShrink: 1 },
+  tiebreaker: { color: colors.success, flexShrink: 1 },
   standings: { gap: spacing.md },
   gameRow: { gap: spacing.sm },
   gameDate: {

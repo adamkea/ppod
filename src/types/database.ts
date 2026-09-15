@@ -44,6 +44,12 @@ export interface Game {
   created_at: string;
 }
 
+// How a season ends.
+//   open     — the default: log as many games as you like, it never ends.
+//   first_to — first player to `target` wins takes it.
+//   best_of  — it runs `target` games and the most wins takes it.
+export type SeasonFormat = 'open' | 'first_to' | 'best_of';
+
 // A named collection of the pod's games — "Summer 2026", "Foundations season".
 // Games join a season by being assigned to it when they're logged or edited,
 // not by falling inside a date range, so seasons can overlap and a game logged
@@ -52,6 +58,10 @@ export interface Season {
   id: string;
   pod_id: string;
   name: string;
+  format: SeasonFormat;
+  // The finish line: wins for `first_to`, games for `best_of`. Always null for
+  // an open season, never null for the other two.
+  target: number | null;
   created_at: string;
 }
 
