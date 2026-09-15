@@ -24,6 +24,7 @@ interface SaveArgs {
   playedAt: string;
   gameType: string;
   note: string;
+  seasonId: string | null;
   participants: ParticipantInput[];
 }
 

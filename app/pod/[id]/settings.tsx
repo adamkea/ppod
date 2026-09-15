@@ -3,7 +3,11 @@ import { StyleSheet, View } from 'react-native';
 import { Switch, Text, useTheme } from 'react-native-paper';
 
 import { Card, ErrorState, Loading } from '@/components/ui';
-import { usePod, useSetPodCommentsEnabled } from '@/hooks/usePods';
+import {
+  usePod,
+  useSetPodCommentsEnabled,
+  useSetPodSeasonsEnabled,
+} from '@/hooks/usePods';
 import { useAuth } from '@/providers/AuthProvider';
 import { colors, spacing } from '@/theme';
 
@@ -15,6 +19,7 @@ export default function PodSettingsScreen() {
 
   const pod = usePod(podId);
   const setCommentsEnabled = useSetPodCommentsEnabled();
+  const setSeasonsEnabled = useSetPodSeasonsEnabled();
 
   const isOwner = pod.data?.owner_id === session?.user.id;
 
@@ -24,24 +29,20 @@ export default function PodSettingsScreen() {
   return (
     <View style={styles.flex}>
       <View style={styles.list}>
-        <Card style={styles.settingRow}>
-          <View style={styles.settingText}>
-            <Text variant="titleSmall">Match comments</Text>
-            <Text
-              variant="bodySmall"
-              style={{ color: theme.colors.onSurfaceVariant }}
-            >
-              Let pod members leave comments on logged games.
-            </Text>
-          </View>
-          <Switch
-            value={pod.data?.comments_enabled ?? false}
-            disabled={!isOwner || setCommentsEnabled.isPending}
-            onValueChange={(enabled) =>
-              setCommentsEnabled.mutate({ podId, enabled })
-            }
-          />
-        </Card>
+        <SettingRow
+          title="Match comments"
+          description="Let pod members leave comments on logged games."
+          value={pod.data?.comments_enabled ?? false}
+          disabled={!isOwner || setCommentsEnabled.isPending}
+          onValueChange={(enabled) => setCommentsEnabled.mutate({ podId, enabled })}
+        />
+        <SettingRow
+          title="Seasons"
+          description="File games into named seasons and score each one on its own. Turning this off hides seasons everywhere — games keep the season they were filed under and show as ordinary games until you turn it back on."
+          value={pod.data?.seasons_enabled ?? false}
+          disabled={!isOwner || setSeasonsEnabled.isPending}
+          onValueChange={(enabled) => setSeasonsEnabled.mutate({ podId, enabled })}
+        />
         {!isOwner ? (
           <Text
             variant="bodySmall"
@@ -52,6 +53,33 @@ export default function PodSettingsScreen() {
         ) : null}
       </View>
     </View>
+  );
+}
+
+function SettingRow({
+  title,
+  description,
+  value,
+  disabled,
+  onValueChange,
+}: {
+  title: string;
+  description: string;
+  value: boolean;
+  disabled: boolean;
+  onValueChange: (enabled: boolean) => void;
+}) {
+  const theme = useTheme();
+  return (
+    <Card style={styles.settingRow}>
+      <View style={styles.settingText}>
+        <Text variant="titleSmall">{title}</Text>
+        <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+          {description}
+        </Text>
+      </View>
+      <Switch value={value} disabled={disabled} onValueChange={onValueChange} />
+    </Card>
   );
 }
 

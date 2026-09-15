@@ -6,6 +6,8 @@ interface SaveGameInput {
   playedAt: string; // YYYY-MM-DD
   gameType: string;
   note: string;
+  // The season to file this game under; null = not part of a season.
+  seasonId: string | null;
   participants: ParticipantInput[];
 }
 
@@ -50,6 +52,7 @@ export async function logGame(input: SaveGameInput): Promise<void> {
     _played_at: input.playedAt,
     _game_type: input.gameType,
     _note: input.note,
+    _season_id: input.seasonId,
     _participants: toRpcParticipants(input.participants),
   });
   if (error) throw error;
@@ -64,6 +67,7 @@ export async function updateGame(
     _played_at: input.playedAt,
     _game_type: input.gameType,
     _note: input.note,
+    _season_id: input.seasonId,
     _participants: toRpcParticipants(input.participants),
   });
   if (error) throw error;

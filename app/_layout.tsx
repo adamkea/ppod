@@ -93,6 +93,8 @@ function RootNavigator() {
       <Stack.Screen name="pod/[id]/settings" options={{ title: 'Pod Settings' }} />
       <Stack.Screen name="pod/[id]/comments" options={{ title: 'Comments' }} />
       <Stack.Screen name="pod/[id]/stats" options={{ title: 'Stats' }} />
+      <Stack.Screen name="pod/[id]/seasons/index" options={{ title: 'Seasons' }} />
+      <Stack.Screen name="pod/[id]/seasons/[seasonId]" options={{ title: 'Season' }} />
       <Stack.Screen name="pod/[id]/series/index" options={{ title: 'Series' }} />
       <Stack.Screen
         name="pod/[id]/series/new"

@@ -10,6 +10,9 @@ export interface Pod {
   invite_code: string;
   // Owner-controlled toggle: when true, members can comment on games.
   comments_enabled: boolean;
+  // Owner-controlled toggle: when true, the pod files games into seasons.
+  // Off hides the feature without discarding any game's season assignment.
+  seasons_enabled: boolean;
   created_at: string;
 }
 
@@ -35,7 +38,20 @@ export interface Game {
   played_at: string; // YYYY-MM-DD
   game_type: string;
   note: string | null;
+  // The season this game is filed under; null = not part of any season.
+  season_id: string | null;
   logged_by_user_id: string | null;
+  created_at: string;
+}
+
+// A named collection of the pod's games — "Summer 2026", "Foundations season".
+// Games join a season by being assigned to it when they're logged or edited,
+// not by falling inside a date range, so seasons can overlap and a game logged
+// late still lands where the pod says it belongs.
+export interface Season {
+  id: string;
+  pod_id: string;
+  name: string;
   created_at: string;
 }
 

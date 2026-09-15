@@ -72,6 +72,18 @@ export function useSetPodCommentsEnabled() {
   });
 }
 
+export function useSetPodSeasonsEnabled() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ podId, enabled }: { podId: string; enabled: boolean }) =>
+      podsApi.setPodSeasonsEnabled(podId, enabled),
+    onSuccess: (_data, { podId }) => {
+      qc.invalidateQueries({ queryKey: queryKeys.pod(podId) });
+      qc.invalidateQueries({ queryKey: queryKeys.pods });
+    },
+  });
+}
+
 export function useDeletePod() {
   const qc = useQueryClient();
   return useMutation({
