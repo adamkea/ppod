@@ -165,3 +165,53 @@ export function computeCommanderRecords(
   }
   return records;
 }
+
+/** Wins and games-played for one player with one commander (or pair). */
+export interface CommanderStat {
+  // `${player_id}:${commanderRecordKey}` — unique per row.
+  key: string;
+  player_id: string;
+  player_name: string;
+  commander: string; // display label, as first logged
+  games_played: number;
+  wins: number;
+}
+
+/**
+ * Wins per commander, split by the player piloting it: the same commander in
+ * two players' hands is two rows. Participants with no commander recorded are
+ * skipped. Sorted like the player table: wins, then games, then commander and
+ * player name.
+ */
+export function computeCommanderStats(games: GameWithPlayers[]): CommanderStat[] {
+  const stats = new Map<string, CommanderStat>();
+  for (const game of games) {
+    for (const gp of game.game_players) {
+      const recordKey = commanderRecordKey(gp.commander, gp.partner_commander);
+      if (!recordKey) continue;
+      const key = `${gp.player_id}:${recordKey}`;
+      let stat = stats.get(key);
+      if (!stat) {
+        stat = {
+          key,
+          player_id: gp.player_id,
+          player_name: gp.players?.name ?? 'Unknown',
+          commander: commanderLabel(gp.commander, gp.partner_commander),
+          games_played: 0,
+          wins: 0,
+        };
+        stats.set(key, stat);
+      }
+      stat.games_played += 1;
+      if (gp.is_winner) stat.wins += 1;
+    }
+  }
+
+  return [...stats.values()].sort(
+    (a, b) =>
+      b.wins - a.wins ||
+      b.games_played - a.games_played ||
+      a.commander.localeCompare(b.commander) ||
+      a.player_name.localeCompare(b.player_name),
+  );
+}

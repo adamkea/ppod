@@ -1,7 +1,7 @@
 import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { FlatList, ScrollView, StyleSheet, View } from 'react-native';
-import { Chip } from 'react-native-paper';
+import { Chip, SegmentedButtons } from 'react-native-paper';
 
 import { StatRow } from '@/components/StatRow';
 import { EmptyState, ErrorState, Loading, SectionLabel } from '@/components/ui';
@@ -9,6 +9,13 @@ import { usePod } from '@/hooks/usePods';
 import { useSeasons } from '@/hooks/useSeasons';
 import { usePlayerStats } from '@/hooks/useStats';
 import { colors, spacing } from '@/theme';
+import type { PlayerStat } from '@/types/database';
+
+interface Row {
+  key: string;
+  stat: Pick<PlayerStat, 'name' | 'games_played' | 'wins'>;
+  detail?: string;
+}
 
 export default function StatsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -16,13 +23,14 @@ export default function StatsScreen() {
 
   // null = all time; otherwise wins are counted over that season's games only.
   const [seasonId, setSeasonId] = useState<string | null>(null);
+  const [view, setView] = useState<'players' | 'commanders'>('players');
 
   const pod = usePod(podId);
   const seasonsEnabled = pod.data?.seasons_enabled ?? false;
   const seasons = useSeasons(podId, seasonsEnabled);
   // A pod that turns seasons off falls back to the all-time table.
   const activeSeasonId = seasonsEnabled ? seasonId : null;
-  const { stats, isLoading, isError } = usePlayerStats(podId, activeSeasonId);
+  const { stats, commanderStats, isLoading, isError } = usePlayerStats(podId, activeSeasonId);
 
   if (isLoading) return <View style={styles.flex}><Loading label="Crunching stats…" /></View>;
   if (isError) return <View style={styles.flex}><ErrorState /></View>;
@@ -30,12 +38,30 @@ export default function StatsScreen() {
   const seasonList = seasonsEnabled ? seasons.data ?? [] : [];
   const activeSeason = seasonList.find((s) => s.id === activeSeasonId) ?? null;
   const hasGames = stats.some((s) => s.games_played > 0);
+  const byCommander = view === 'commanders';
+
+  // Commander rows are titled by the commander, with the pilot underneath.
+  const rows: Row[] = byCommander
+    ? commanderStats.map((c) => ({
+        key: c.key,
+        stat: { name: c.commander, games_played: c.games_played, wins: c.wins },
+        detail: c.player_name,
+      }))
+    : stats.map((s) => ({ key: s.player_id, stat: s }));
+
+  const label = byCommander
+    ? activeSeason
+      ? `Commander wins in ${activeSeason.name}`
+      : 'Wins per commander'
+    : activeSeason
+      ? `Wins in ${activeSeason.name}`
+      : 'Wins per player';
 
   return (
     <View style={styles.flex}>
       <FlatList
-        data={stats}
-        keyExtractor={(item) => item.player_id}
+        data={rows}
+        keyExtractor={(item) => item.key}
         contentContainerStyle={styles.list}
         ListHeaderComponent={
           <View style={styles.header}>
@@ -69,23 +95,38 @@ export default function StatsScreen() {
               </ScrollView>
             ) : null}
             {hasGames ? (
-              <SectionLabel>
-                {activeSeason ? `Wins in ${activeSeason.name}` : 'Wins per player'}
-              </SectionLabel>
+              <SegmentedButtons
+                value={view}
+                onValueChange={(v) => setView(v as 'players' | 'commanders')}
+                buttons={[
+                  { value: 'players', label: 'Players', icon: 'account' },
+                  { value: 'commanders', label: 'Commanders', icon: 'cards' },
+                ]}
+              />
             ) : null}
+            {rows.length > 0 ? <SectionLabel>{label}</SectionLabel> : null}
           </View>
         }
         ListEmptyComponent={
-          <EmptyState
-            title={activeSeason ? 'No games in this season' : 'No stats yet'}
-            subtitle={
-              activeSeason
-                ? 'Assign games to this season when you log them and the standings will fill in.'
-                : 'Log a few games and the leaderboard will fill in.'
-            }
-          />
+          byCommander && hasGames ? (
+            <EmptyState
+              title="No commanders recorded"
+              subtitle="Pick a commander for each player when you log a game and this table will fill in."
+            />
+          ) : (
+            <EmptyState
+              title={activeSeason ? 'No games in this season' : 'No stats yet'}
+              subtitle={
+                activeSeason
+                  ? 'Assign games to this season when you log them and the standings will fill in.'
+                  : 'Log a few games and the leaderboard will fill in.'
+              }
+            />
+          )
         }
-        renderItem={({ item, index }) => <StatRow stat={item} rank={index + 1} />}
+        renderItem={({ item, index }) => (
+          <StatRow stat={item.stat} rank={index + 1} detail={item.detail} />
+        )}
       />
     </View>
   );
