@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { FlatList, ScrollView, StyleSheet, View } from 'react-native';
 import { Chip, SegmentedButtons } from 'react-native-paper';
 
+import { CommanderStatArt } from '@/components/CommanderStatArt';
 import { StatRow } from '@/components/StatRow';
 import { EmptyState, ErrorState, Loading, SectionLabel } from '@/components/ui';
 import { usePod } from '@/hooks/usePods';
@@ -15,6 +16,7 @@ interface Row {
   key: string;
   stat: Pick<PlayerStat, 'name' | 'games_played' | 'wins'>;
   detail?: string;
+  art?: React.ReactNode;
 }
 
 export default function StatsScreen() {
@@ -46,6 +48,14 @@ export default function StatsScreen() {
         key: c.key,
         stat: { name: c.commander, games_played: c.games_played, wins: c.wins },
         detail: c.player_name,
+        art: (
+          <CommanderStatArt
+            commander={c.commander_name}
+            partner={c.partner_name}
+            commanderScryfallId={c.commander_scryfall_id}
+            partnerScryfallId={c.partner_scryfall_id}
+          />
+        ),
       }))
     : stats.map((s) => ({ key: s.player_id, stat: s }));
 
@@ -110,8 +120,8 @@ export default function StatsScreen() {
         ListEmptyComponent={
           byCommander && hasGames ? (
             <EmptyState
-              title="No commanders recorded"
-              subtitle="Pick a commander for each player when you log a game and this table will fill in."
+              title="No commander wins yet"
+              subtitle="Commanders show up here once they've won a game. Pick a commander for each player when you log games."
             />
           ) : (
             <EmptyState
@@ -125,7 +135,7 @@ export default function StatsScreen() {
           )
         }
         renderItem={({ item, index }) => (
-          <StatRow stat={item.stat} rank={index + 1} detail={item.detail} />
+          <StatRow stat={item.stat} rank={index + 1} detail={item.detail} art={item.art} />
         )}
       />
     </View>

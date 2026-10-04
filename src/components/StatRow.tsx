@@ -15,16 +15,19 @@ interface StatRowStat {
  * One line of a wins leaderboard: rank, name, games and win rate, and the win
  * count in the gold scorekeeping numeral. Shared so a season's standings read
  * exactly like the pod's all-time table. `detail` is an optional line under
- * the name — the pilot, on the per-commander table.
+ * the name — the pilot, on the per-commander table — and `art` an optional
+ * picture between the rank and the name.
  */
 export function StatRow({
   stat,
   rank,
   detail,
+  art,
 }: {
   stat: StatRowStat;
   rank: number;
   detail?: string;
+  art?: React.ReactNode;
 }) {
   const theme = useTheme();
   const winRate =
@@ -33,6 +36,7 @@ export function StatRow({
   return (
     <Card style={styles.row}>
       <Text style={styles.rank}>{rank}</Text>
+      {art}
       <View style={styles.rowMain}>
         <Text variant="titleMedium">{stat.name}</Text>
         {detail ? (
