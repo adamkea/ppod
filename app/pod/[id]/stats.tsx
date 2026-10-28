@@ -8,6 +8,7 @@ import { StatRow } from '@/components/StatRow';
 import { EmptyState, ErrorState, Loading, SectionLabel } from '@/components/ui';
 import { usePod } from '@/hooks/usePods';
 import { useSeasons } from '@/hooks/useSeasons';
+import { useMyPlayer } from '@/hooks/usePlayers';
 import { usePlayerStats } from '@/hooks/useStats';
 import { colors, spacing } from '@/theme';
 import type { PlayerStat } from '@/types/database';
@@ -17,6 +18,8 @@ interface Row {
   stat: Pick<PlayerStat, 'name' | 'games_played' | 'wins'>;
   detail?: string;
   art?: React.ReactNode;
+  // The player behind the row, to tag the signed-in user's own.
+  playerId: string;
 }
 
 export default function StatsScreen() {
@@ -28,6 +31,7 @@ export default function StatsScreen() {
   const [view, setView] = useState<'players' | 'commanders'>('players');
 
   const pod = usePod(podId);
+  const myPlayer = useMyPlayer(podId);
   const seasonsEnabled = pod.data?.seasons_enabled ?? false;
   const seasons = useSeasons(podId, seasonsEnabled);
   // A pod that turns seasons off falls back to the all-time table.
@@ -48,6 +52,7 @@ export default function StatsScreen() {
         key: c.key,
         stat: { name: c.commander, games_played: c.games_played, wins: c.wins },
         detail: c.player_name,
+        playerId: c.player_id,
         art: (
           <CommanderStatArt
             commander={c.commander_name}
@@ -57,7 +62,7 @@ export default function StatsScreen() {
           />
         ),
       }))
-    : stats.map((s) => ({ key: s.player_id, stat: s }));
+    : stats.map((s) => ({ key: s.player_id, stat: s, playerId: s.player_id }));
 
   const label = byCommander
     ? activeSeason
@@ -135,7 +140,13 @@ export default function StatsScreen() {
           )
         }
         renderItem={({ item, index }) => (
-          <StatRow stat={item.stat} rank={index + 1} detail={item.detail} art={item.art} />
+          <StatRow
+            stat={item.stat}
+            rank={index + 1}
+            detail={item.detail}
+            art={item.art}
+            isYou={!!myPlayer.data && item.playerId === myPlayer.data.id}
+          />
         )}
       />
     </View>

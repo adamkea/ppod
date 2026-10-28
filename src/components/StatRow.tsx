@@ -1,7 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 import { Text, useTheme } from 'react-native-paper';
 
-import { Card } from '@/components/ui';
+import { Card, YouTag } from '@/components/ui';
 import { colors, fonts, spacing } from '@/theme';
 
 // The fields a leaderboard line needs — a PlayerStat fits as-is.
@@ -16,18 +16,20 @@ interface StatRowStat {
  * count in the gold scorekeeping numeral. Shared so a season's standings read
  * exactly like the pod's all-time table. `detail` is an optional line under
  * the name — the pilot, on the per-commander table — and `art` an optional
- * picture between the rank and the name.
+ * picture between the rank and the name. `isYou` tags the signed-in user's row.
  */
 export function StatRow({
   stat,
   rank,
   detail,
   art,
+  isYou = false,
 }: {
   stat: StatRowStat;
   rank: number;
   detail?: string;
   art?: React.ReactNode;
+  isYou?: boolean;
 }) {
   const theme = useTheme();
   const winRate =
@@ -38,7 +40,12 @@ export function StatRow({
       <Text style={styles.rank}>{rank}</Text>
       {art}
       <View style={styles.rowMain}>
-        <Text variant="titleMedium">{stat.name}</Text>
+        <View style={styles.nameRow}>
+          <Text variant="titleMedium" style={styles.name}>
+            {stat.name}
+          </Text>
+          {isYou ? <YouTag /> : null}
+        </View>
         {detail ? (
           <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
             {detail}
@@ -69,6 +76,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   rowMain: { flex: 1, gap: 2 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  name: { flexShrink: 1 },
   winsBox: { alignItems: 'center', minWidth: 48 },
   wins: {
     fontFamily: fonts.monoBold,

@@ -1,13 +1,22 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Image, Pressable, SectionList, StyleSheet, View } from 'react-native';
 import { Icon, IconButton, Text, useTheme } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
+import { ClaimPlayerModal } from '@/components/PlayerLinkModals';
 import { PromptModal } from '@/components/PromptModal';
 import { SetSymbol } from '@/components/SetSymbol';
-import { Card, EmptyState, ErrorState, Loading, SectionLabel } from '@/components/ui';
+import {
+  Card,
+  EmptyState,
+  ErrorState,
+  Loading,
+  SectionLabel,
+  YouTag,
+} from '@/components/ui';
 import { useCommentCounts } from '@/hooks/useComments';
 import { useGames } from '@/hooks/useGames';
 import { usePlayers } from '@/hooks/usePlayers';
@@ -22,8 +31,12 @@ import { useAuth } from '@/providers/AuthProvider';
 import { colors, fonts, radius, spacing } from '@/theme';
 import type { GameWithPlayers } from '@/types/database';
 
+// Remembers, per pod, that the user waved off the "which player are you?"
+// banner. Best-effort: if storage fails the banner just shows again.
+const claimDismissedKey = (podId: string) => `ppod:claim-banner-dismissed:${podId}`;
+
 export default function PodDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, claim } = useLocalSearchParams<{ id: string; claim?: string }>();
   const podId = id!;
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -42,6 +55,36 @@ export default function PodDetailScreen() {
   const isOwner = pod.data?.owner_id === session?.user.id;
   const commentsEnabled = pod.data?.comments_enabled ?? false;
   const commentCounts = useCommentCounts(podId, commentsEnabled);
+
+  const myPlayerId =
+    players.data?.find((p) => p.user_id === session?.user.id)?.id ?? null;
+  const canClaim =
+    players.isSuccess && !myPlayerId && players.data.some((p) => !p.user_id);
+
+  const [claimOpen, setClaimOpen] = useState(false);
+  const [claimDismissed, setClaimDismissed] = useState(true);
+  useEffect(() => {
+    let cancelled = false;
+    AsyncStorage.getItem(claimDismissedKey(podId))
+      .then((v) => !cancelled && setClaimDismissed(v === '1'))
+      .catch(() => !cancelled && setClaimDismissed(false));
+    return () => {
+      cancelled = true;
+    };
+  }, [podId]);
+
+  // Straight after joining, ask once — as soon as the roster has loaded.
+  const askedAfterJoin = useRef(false);
+  useEffect(() => {
+    if (askedAfterJoin.current || claim !== '1' || !players.isSuccess) return;
+    askedAfterJoin.current = true;
+    if (canClaim) setClaimOpen(true);
+  }, [claim, players.isSuccess, canClaim]);
+
+  function dismissClaimBanner() {
+    setClaimDismissed(true);
+    AsyncStorage.setItem(claimDismissedKey(podId), '1').catch(() => {});
+  }
 
   const nameById = useMemo(() => {
     const map = new Map<string, string>();
@@ -140,13 +183,21 @@ export default function PodDetailScreen() {
             seriesGames.refetch();
           }}
           ListHeaderComponent={
-            <PodHeader
-              inviteCode={pod.data?.invite_code}
-              onSeasons={
-                seasonsEnabled ? () => router.push(`/pod/${podId}/seasons`) : undefined
-              }
-              onPlayers={() => router.push(`/pod/${podId}/players`)}
-            />
+            <>
+              <PodHeader
+                inviteCode={pod.data?.invite_code}
+                onSeasons={
+                  seasonsEnabled ? () => router.push(`/pod/${podId}/seasons`) : undefined
+                }
+                onPlayers={() => router.push(`/pod/${podId}/players`)}
+              />
+              {canClaim && !claimDismissed ? (
+                <ClaimBanner
+                  onChoose={() => setClaimOpen(true)}
+                  onDismiss={dismissClaimBanner}
+                />
+              ) : null}
+            </>
           }
           ListEmptyComponent={
             <EmptyState
@@ -167,6 +218,7 @@ export default function PodDetailScreen() {
             ) : (
               <GameCard
                 game={item.game}
+                myPlayerId={myPlayerId}
                 seasonName={
                   // Seasons off: the game shows as an ordinary game, even
                   // though it keeps the season it was filed under.
@@ -205,6 +257,13 @@ export default function PodDetailScreen() {
         error={renameError}
         onSubmit={handleRename}
         onClose={() => { setRenaming(false); setRenameError(null); }}
+      />
+
+      <ClaimPlayerModal
+        visible={claimOpen}
+        podId={podId}
+        players={players.data ?? []}
+        onClose={() => setClaimOpen(false)}
       />
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.md }]}>
@@ -259,16 +318,40 @@ function PodHeader({
   );
 }
 
+function ClaimBanner({
+  onChoose,
+  onDismiss,
+}: {
+  onChoose: () => void;
+  onDismiss: () => void;
+}) {
+  const theme = useTheme();
+  return (
+    <Card style={styles.claimBanner}>
+      <Text variant="titleSmall">Which player are you?</Text>
+      <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+        Link your account to your name in this pod so your games and stats are yours.
+      </Text>
+      <View style={styles.claimActions}>
+        <Button label="Not now" variant="ghost" onPress={onDismiss} style={styles.claimAction} />
+        <Button label="Choose" variant="secondary" onPress={onChoose} style={styles.claimAction} />
+      </View>
+    </Card>
+  );
+}
+
 function CommanderCell({
   name,
   commander,
   scryfallId,
   isWinner,
+  isYou,
 }: {
   name: string;
   commander: string | null;
   scryfallId: string | null;
   isWinner: boolean;
+  isYou: boolean;
 }) {
   const theme = useTheme();
   // Pinned art by print id when chosen, else the name's default printing.
@@ -309,6 +392,7 @@ function CommanderCell({
         >
           {name}
         </Text>
+        {isYou ? <YouTag /> : null}
       </View>
       {commander ? (
         <Text
@@ -325,6 +409,7 @@ function CommanderCell({
 
 function GameCard({
   game,
+  myPlayerId,
   seasonName,
   canEdit,
   onPress,
@@ -333,6 +418,8 @@ function GameCard({
   onComments,
 }: {
   game: GameWithPlayers;
+  // The signed-in user's player in this pod, tagged "you" in the card.
+  myPlayerId: string | null;
   // The season this game is filed under, if any.
   seasonName: string | null;
   canEdit: boolean;
@@ -370,6 +457,7 @@ function GameCard({
               commander={gp.commander}
               scryfallId={gp.commander_scryfall_id}
               isWinner={gp.is_winner}
+              isYou={gp.player_id === myPlayerId}
             />
           ))}
         </View>
@@ -390,6 +478,7 @@ function GameCard({
                   >
                     {gp.players?.name ?? 'Unknown'}
                   </Text>
+                  {gp.player_id === myPlayerId ? <YouTag /> : null}
                 </View>
                 {cmd ? (
                   <Text
@@ -509,6 +598,14 @@ const styles = StyleSheet.create({
     letterSpacing: 3,
     color: colors.text,
   },
+  claimBanner: { gap: spacing.xs, marginTop: spacing.md },
+  claimActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  claimAction: { minHeight: 40 },
   sectionHeader: {
     marginTop: spacing.sm,
   },
