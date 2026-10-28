@@ -47,16 +47,6 @@ export async function claimPlayer(playerId: string): Promise<Player> {
   return data as Player;
 }
 
-/** Owner only: link a pod member to a player, replacing any existing link. */
-export async function linkPlayer(playerId: string, userId: string): Promise<Player> {
-  const { data, error } = await supabase.rpc('link_player', {
-    _player_id: playerId,
-    _user_id: userId,
-  });
-  if (error) throw error;
-  return data as Player;
-}
-
 /** The owner, or the linked user themselves. */
 export async function unlinkPlayer(playerId: string): Promise<Player> {
   const { data, error } = await supabase.rpc('unlink_player', { _player_id: playerId });

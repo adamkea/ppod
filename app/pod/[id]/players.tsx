@@ -5,7 +5,6 @@ import { IconButton, Text, useTheme } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
-import { LinkAccountModal } from '@/components/PlayerLinkModals';
 import { PlayerProfileModal } from '@/components/PlayerProfileModal';
 import { PromptModal } from '@/components/PromptModal';
 import { Card, EmptyState, ErrorState, Loading } from '@/components/ui';
@@ -55,7 +54,6 @@ export default function PlayersScreen() {
   const [adding, setAdding] = useState(false);
   const [renaming, setRenaming] = useState<Player | null>(null);
   const [profilePlayer, setProfilePlayer] = useState<Player | null>(null);
-  const [linking, setLinking] = useState<Player | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [linkError, setLinkError] = useState<string | null>(null);
 
@@ -105,10 +103,13 @@ export default function PlayersScreen() {
     }
   }
 
-  async function confirmUnlinkSelf(player: Player) {
+  async function confirmUnlink(player: Player) {
+    const self = player.user_id === userId;
     const ok = await confirmAsync({
-      title: 'Unlink yourself',
-      message: `Stop playing as "${player.name}"? Their games stay as they are.`,
+      title: self ? 'Unlink yourself' : 'Unlink account',
+      message: self
+        ? `Stop playing as "${player.name}"? Their games stay as they are.`
+        : `Unlink the account playing as "${player.name}"? Their games stay as they are, and they can link themselves again.`,
       confirmLabel: 'Unlink',
       destructive: true,
     });
@@ -117,14 +118,17 @@ export default function PlayersScreen() {
     try {
       await unlinkPlayer.mutateAsync(player.id);
     } catch (e) {
-      setLinkError(e instanceof Error ? e.message : 'Could not unlink you.');
+      setLinkError(e instanceof Error ? e.message : 'Could not unlink that player.');
     }
   }
 
   function linkedLabel(player: Player): string | null {
     if (!player.user_id) return null;
     if (player.user_id === userId) return 'You';
-    return memberName.get(player.user_id) ?? 'Linked account';
+    // Members without a nickname are named after their player (or just
+    // "Member"), which says nothing new here.
+    const name = memberName.get(player.user_id);
+    return name && name !== player.name && name !== 'Member' ? name : 'Linked account';
   }
 
   return (
@@ -170,8 +174,9 @@ export default function PlayersScreen() {
                   </View>
                 </Pressable>
                 <View style={styles.rowActions}>
-                  {/* A member who isn't anyone yet can claim any free name. */}
-                  {!isOwner && !myPlayer && !item.user_id ? (
+                  {/* Anyone who isn't a player yet, owner included, can claim
+                      a free name. Only you can link your own account. */}
+                  {!myPlayer && !item.user_id ? (
                     <Button
                       label="This is me"
                       variant="secondary"
@@ -181,22 +186,19 @@ export default function PlayersScreen() {
                       style={styles.claimButton}
                     />
                   ) : null}
-                  {!isOwner && isMine ? (
+                  {/* You can unlink yourself; the owner can unlink anyone. */}
+                  {isMine || (isOwner && item.user_id) ? (
                     <IconButton
                       icon="link-off"
                       size={20}
-                      onPress={() => confirmUnlinkSelf(item)}
-                      accessibilityLabel={`Unlink yourself from ${item.name}`}
+                      onPress={() => confirmUnlink(item)}
+                      accessibilityLabel={
+                        isMine ? `Unlink yourself from ${item.name}` : `Unlink ${item.name}`
+                      }
                     />
                   ) : null}
                   {isOwner ? (
                     <>
-                      <IconButton
-                        icon={item.user_id ? 'link-variant' : 'link-variant-plus'}
-                        size={20}
-                        onPress={() => setLinking(item)}
-                        accessibilityLabel={`Link an account to ${item.name}`}
-                      />
                       <IconButton
                         icon="pencil-outline"
                         size={20}
@@ -254,14 +256,6 @@ export default function PlayersScreen() {
           setRenaming(null);
           setError(null);
         }}
-      />
-
-      <LinkAccountModal
-        podId={podId}
-        player={linking}
-        players={players.data ?? []}
-        members={members.data ?? []}
-        onClose={() => setLinking(null)}
       />
 
       <PlayerProfileModal

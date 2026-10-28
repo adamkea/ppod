@@ -114,7 +114,7 @@ export default function ProfileScreen() {
         <View style={styles.section}>
           <SectionLabel>Nickname</SectionLabel>
           <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-            Shown with your comments instead of your email. Change it any time.
+            Shown to your pod-mates with your comments and in member lists. Change it any time.
           </Text>
           <TextField
             placeholder="e.g. Storm Crow"
