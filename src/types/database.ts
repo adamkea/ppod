@@ -25,8 +25,8 @@ export interface PodMember {
 }
 
 // A pod member as list_pod_members returns them: the membership plus a display
-// name (nickname, else the part of their email before the @), since members
-// can't read each other's accounts directly.
+// name (nickname, else their linked player's name, else "Member"), since
+// members can't read each other's accounts. Emails are never exposed.
 export interface PodMemberSummary {
   user_id: string;
   role: Role;
@@ -174,8 +174,8 @@ export interface UserProfile {
 }
 
 // A member's comment on a game. `author_name` is captured at write time by
-// the add_game_comment RPC (nickname, else linked player name, else email
-// prefix); the UI prefers the author's live nickname when one exists.
+// the add_game_comment RPC (nickname, else linked player name, else
+// "Member"); the UI prefers the author's live nickname when one exists.
 export interface GameComment {
   id: string;
   game_id: string;

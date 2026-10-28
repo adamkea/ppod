@@ -66,12 +66,6 @@ export function useClaimPlayer(podId: string) {
   return useLinkMutation(podId, (playerId: string) => playersApi.claimPlayer(playerId));
 }
 
-export function useLinkPlayer(podId: string) {
-  return useLinkMutation(podId, (args: { playerId: string; userId: string }) =>
-    playersApi.linkPlayer(args.playerId, args.userId),
-  );
-}
-
 export function useUnlinkPlayer(podId: string) {
   return useLinkMutation(podId, (playerId: string) => playersApi.unlinkPlayer(playerId));
 }

@@ -62,6 +62,7 @@ The migrations:
 | `0015_pod_seasons_enabled.sql` | `pods.seasons_enabled` — seasons become opt-in per pod; the RPCs honour the setting. |
 | `0016_season_formats.sql` | `seasons.format` / `seasons.target` — open-ended, first-to-X, or best-of-X — plus `season_is_decided()`, which closes a finished season to new games. |
 | `0017_player_links.sql` | Player ↔ account links: one player per account per pod, the `claim_player` / `link_player` / `unlink_player` RPCs, unlink-on-leave, and `list_pod_members` for member display names. |
+| `0018_self_only_links.sql` | Drops `link_player` so only you can link your own account, and stops falling back to email prefixes for display names (scrubbing ones already stored on comments). |
 
 ## App setup
 
@@ -121,14 +122,15 @@ Notes:
 A **player** is a name in the game log; a **member** is an account that can open
 the pod. Linking connects the two, so the app knows which player *you* are.
 
-- **Claim:** any member can tap **This is me** on an unlinked player (Players
+- **Claim:** any member, owner included, can tap **This is me** on an unlinked player (Players
   screen), or pick their name from **Which player are you?**, which opens right
   after joining a pod and stays as a dismissible banner on the pod screen until
   they're linked. A claim applies immediately, with no approval step.
-- **Assign:** the owner can link any member to any player from the link icon on
-  the Players screen. Picking a member who's already linked moves them, and an
-  existing link on the player is replaced.
-- **Unlink:** the owner, or the linked member themselves. Leaving or being
+- **Only you can link yourself.** The owner can't attach someone else's account
+  to a player; if a claim is wrong, the owner unlinks it and the member
+  re-claims.
+- **Unlink:** the owner (link-off icon on the Players screen), or the linked
+  member themselves. Leaving or being
   removed from a pod unlinks you automatically.
 
 The rules live in the database: at most one player per account per pod
@@ -137,6 +139,9 @@ asking. Games and stats are keyed by player, so linking never changes game
 data; it just lets the app tag your own player as **you** in the game log, the
 leaderboards and season standings. The owner sees who plays as whom under
 **Settings → Members**.
+
+Email addresses are never shown to other people. A member's display name is
+their nickname, else their linked player's name, else "Member".
 
 ## Seasons
 
