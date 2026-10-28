@@ -39,6 +39,8 @@ export default function SeasonDetailScreen() {
   const season = useSeason(seasonId!);
   const games = useGames(podId);
   const players = usePlayers(podId);
+  const myPlayerId =
+    players.data?.find((p) => p.user_id === session?.user.id)?.id ?? null;
 
   const updateSeason = useUpdateSeason(podId);
   const deleteSeason = useDeleteSeason(podId);
@@ -150,7 +152,12 @@ export default function SeasonDetailScreen() {
             {stats.length > 0 ? (
               <View style={styles.standings}>
                 {stats.map((stat, i) => (
-                  <StatRow key={stat.player_id} stat={stat} rank={i + 1} />
+                  <StatRow
+                    key={stat.player_id}
+                    stat={stat}
+                    rank={i + 1}
+                    isYou={stat.player_id === myPlayerId}
+                  />
                 ))}
               </View>
             ) : null}

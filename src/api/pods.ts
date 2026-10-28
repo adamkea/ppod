@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import type { Pod, PodMember } from '@/types/database';
+import type { Pod, PodMemberSummary } from '@/types/database';
 
 export async function listMyPods(): Promise<Pod[]> {
   // RLS limits this to pods the caller is a member of.
@@ -71,12 +71,9 @@ export async function deletePod(podId: string): Promise<void> {
   if (error) throw error;
 }
 
-export async function listMembers(podId: string): Promise<PodMember[]> {
-  const { data, error } = await supabase
-    .from('pod_members')
-    .select('*')
-    .eq('pod_id', podId)
-    .order('created_at', { ascending: true });
+export async function listMembers(podId: string): Promise<PodMemberSummary[]> {
+  // An RPC rather than a table read so each member comes with a display name.
+  const { data, error } = await supabase.rpc('list_pod_members', { _pod_id: podId });
   if (error) throw error;
-  return data ?? [];
+  return (data ?? []) as PodMemberSummary[];
 }

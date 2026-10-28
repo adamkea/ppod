@@ -55,6 +55,12 @@ export function SectionLabel({
   return <Text style={[styles.sectionLabel, style]}>{children}</Text>;
 }
 
+// Marks the signed-in user's own player wherever names are listed: a quiet
+// mono tag rather than a color, since gold is reserved for winners.
+export function YouTag() {
+  return <Text style={styles.youTag}>you</Text>;
+}
+
 export function Loading({ label }: { label?: string }) {
   return (
     <View style={styles.center}>
@@ -126,6 +132,18 @@ const styles = StyleSheet.create({
     letterSpacing: 1.4,
     textTransform: 'uppercase',
     color: colors.textMuted,
+  },
+  youTag: {
+    fontFamily: fonts.mono,
+    fontSize: 10,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    color: colors.textMuted,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    borderRadius: radius.sm,
+    paddingHorizontal: 4,
+    overflow: 'hidden',
   },
   center: {
     flex: 1,

@@ -61,6 +61,7 @@ The migrations:
 | `0014_seasons.sql` | `seasons` + the `games.season_id` assignment, and `log_game` / `update_game` redefined to carry it. |
 | `0015_pod_seasons_enabled.sql` | `pods.seasons_enabled` — seasons become opt-in per pod; the RPCs honour the setting. |
 | `0016_season_formats.sql` | `seasons.format` / `seasons.target` — open-ended, first-to-X, or best-of-X — plus `season_is_decided()`, which closes a finished season to new games. |
+| `0017_player_links.sql` | Player ↔ account links: one player per account per pod, the `claim_player` / `link_player` / `unlink_player` RPCs, unlink-on-leave, and `list_pod_members` for member display names. |
 
 ## App setup
 
@@ -112,9 +113,30 @@ Notes:
 - Any pod member can **log and edit** any game in the pod.
 - Only the pod **owner** can **delete** games or the pod itself, and manage the
   member roster.
-- A **player** is just a name and doesn't need an account; the optional
-  `user_id` link (for "see your own stats") is wired in the schema for later
-  phases.
+- A **player** is just a name and doesn't need an account. A member can link
+  their account to one (see *Player links* below).
+
+## Player links
+
+A **player** is a name in the game log; a **member** is an account that can open
+the pod. Linking connects the two, so the app knows which player *you* are.
+
+- **Claim:** any member can tap **This is me** on an unlinked player (Players
+  screen), or pick their name from **Which player are you?**, which opens right
+  after joining a pod and stays as a dismissible banner on the pod screen until
+  they're linked. A claim applies immediately, with no approval step.
+- **Assign:** the owner can link any member to any player from the link icon on
+  the Players screen. Picking a member who's already linked moves them, and an
+  existing link on the player is replaced.
+- **Unlink:** the owner, or the linked member themselves. Leaving or being
+  removed from a pod unlinks you automatically.
+
+The rules live in the database: at most one player per account per pod
+(partial unique index), only pod members can be linked, and the RPCs check who's
+asking. Games and stats are keyed by player, so linking never changes game
+data; it just lets the app tag your own player as **you** in the game log, the
+leaderboards and season standings. The owner sees who plays as whom under
+**Settings → Members**.
 
 ## Seasons
 

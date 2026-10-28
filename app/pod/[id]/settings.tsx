@@ -1,13 +1,18 @@
 import { useLocalSearchParams } from 'expo-router';
-import { StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { Switch, Text, useTheme } from 'react-native-paper';
 
-import { Card, ErrorState, Loading } from '@/components/ui';
+import { Card, ErrorState, Loading, SectionLabel } from '@/components/ui';
+import { UserAvatar } from '@/components/UserAvatar';
+import { usePlayers } from '@/hooks/usePlayers';
 import {
   usePod,
+  usePodMembers,
   useSetPodCommentsEnabled,
   useSetPodSeasonsEnabled,
 } from '@/hooks/usePods';
+import { useProfiles } from '@/hooks/useProfile';
+import type { Player, PodMemberSummary } from '@/types/database';
 import { useAuth } from '@/providers/AuthProvider';
 import { colors, spacing } from '@/theme';
 
@@ -18,6 +23,8 @@ export default function PodSettingsScreen() {
   const theme = useTheme();
 
   const pod = usePod(podId);
+  const members = usePodMembers(podId);
+  const players = usePlayers(podId);
   const setCommentsEnabled = useSetPodCommentsEnabled();
   const setSeasonsEnabled = useSetPodSeasonsEnabled();
 
@@ -28,7 +35,7 @@ export default function PodSettingsScreen() {
 
   return (
     <View style={styles.flex}>
-      <View style={styles.list}>
+      <ScrollView contentContainerStyle={styles.list}>
         <SettingRow
           title="Match comments"
           description="Let pod members leave comments on logged games."
@@ -51,7 +58,52 @@ export default function PodSettingsScreen() {
             Only the pod owner can change these settings.
           </Text>
         ) : null}
-      </View>
+
+        <MembersSection members={members.data ?? []} players={players.data ?? []} />
+      </ScrollView>
+    </View>
+  );
+}
+
+// Who has opened the pod, and which player (if any) each of them plays as.
+// Links are changed from the Players screen; this is the at-a-glance view.
+function MembersSection({
+  members,
+  players,
+}: {
+  members: PodMemberSummary[];
+  players: Player[];
+}) {
+  const theme = useTheme();
+  const profiles = useProfiles(members.map((m) => m.user_id));
+  if (members.length === 0) return null;
+
+  const playerByUser = new Map<string, Player>();
+  for (const p of players) if (p.user_id) playerByUser.set(p.user_id, p);
+
+  return (
+    <View style={styles.members}>
+      <SectionLabel>Members</SectionLabel>
+      {members.map((m) => {
+        const player = playerByUser.get(m.user_id);
+        return (
+          <Card key={m.user_id} style={styles.memberRow}>
+            <UserAvatar profile={profiles.data?.get(m.user_id)} size={32} />
+            <View style={styles.settingText}>
+              <Text variant="titleSmall">{m.display_name}</Text>
+              <Text
+                variant="bodySmall"
+                style={{ color: player ? colors.success : theme.colors.onSurfaceVariant }}
+              >
+                {player ? `Plays as ${player.name}` : 'Not linked to a player'}
+              </Text>
+            </View>
+            <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>
+              {m.role === 'owner' ? 'Owner' : 'Member'}
+            </Text>
+          </Card>
+        );
+      })}
     </View>
   );
 }
@@ -94,4 +146,6 @@ const styles = StyleSheet.create({
   },
   settingText: { flex: 1, gap: 2 },
   hint: { textAlign: 'center' },
+  members: { gap: spacing.md, marginTop: spacing.md },
+  memberRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
 });

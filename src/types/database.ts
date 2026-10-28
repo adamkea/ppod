@@ -24,10 +24,22 @@ export interface PodMember {
   created_at: string;
 }
 
+// A pod member as list_pod_members returns them: the membership plus a display
+// name (nickname, else the part of their email before the @), since members
+// can't read each other's accounts directly.
+export interface PodMemberSummary {
+  user_id: string;
+  role: Role;
+  display_name: string;
+  created_at: string;
+}
+
 export interface Player {
   id: string;
   pod_id: string;
   name: string;
+  // The account this player is linked to; null = just a name. At most one
+  // player per account per pod (see 0017_player_links.sql).
   user_id: string | null;
   created_at: string;
 }

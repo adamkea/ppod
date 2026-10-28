@@ -54,7 +54,8 @@ export default function PodsScreen() {
     try {
       const pod = await joinPod.mutateAsync(code);
       closeDialog();
-      router.push(`/pod/${pod.id}`);
+      // `claim` asks the pod screen to open "Which player are you?" once.
+      router.push({ pathname: '/pod/[id]', params: { id: pod.id, claim: '1' } });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not join pod.');
     }

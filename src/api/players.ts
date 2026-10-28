@@ -36,3 +36,30 @@ export async function deletePlayer(playerId: string): Promise<void> {
   const { error } = await supabase.from('players').delete().eq('id', playerId);
   if (error) throw error;
 }
+
+// Linking goes through RPCs: members can't write `players` directly, and the
+// functions enforce one player per account per pod.
+
+/** Link the signed-in user to an unlinked player ("this is me"). */
+export async function claimPlayer(playerId: string): Promise<Player> {
+  const { data, error } = await supabase.rpc('claim_player', { _player_id: playerId });
+  if (error) throw error;
+  return data as Player;
+}
+
+/** Owner only: link a pod member to a player, replacing any existing link. */
+export async function linkPlayer(playerId: string, userId: string): Promise<Player> {
+  const { data, error } = await supabase.rpc('link_player', {
+    _player_id: playerId,
+    _user_id: userId,
+  });
+  if (error) throw error;
+  return data as Player;
+}
+
+/** The owner, or the linked user themselves. */
+export async function unlinkPlayer(playerId: string): Promise<Player> {
+  const { data, error } = await supabase.rpc('unlink_player', { _player_id: playerId });
+  if (error) throw error;
+  return data as Player;
+}
